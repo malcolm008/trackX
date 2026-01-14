@@ -56,7 +56,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                 colors: [
                   Colors.white,
                   Theme.of(context).colorScheme.primary,
-                  Colors.black.withOpacity(0.1),
+                  Theme.of(context).colorScheme.primary.withOpacity(0.1),
                 ],
               ),
             ),
@@ -68,18 +68,18 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                     width: 120,
                     height: 120,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Color(0x2E2E2E24),
                       borderRadius: BorderRadius.circular(24),
                     ),
-                    child: const Icon(
-                      Icons.admin_panel_settings,
-                      size: 60,
-                      color: Colors.blue,
+                    child: Image.asset(
+                      'assets/icon/TrackX.png',
+                      width: 120,
+                      height: 120,
                     ),
                   ),
                   const SizedBox(height: 32),
                   const Text(
-                    'TrackX Admin',
+                    'TrackX',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 32,
@@ -260,7 +260,17 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     return SingleChildScrollView(
       child: Container(
         height: MediaQuery.of(context).size.height,
-        color: Theme.of(context).colorScheme.primary,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.white,
+              Theme.of(context).colorScheme.primary,
+              Theme.of(context).colorScheme.primary.withOpacity(0.1),
+            ],
+          ),
+        ),
         child: Column(
           children: [
             // Top panel - Branding
@@ -278,15 +288,15 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(isTablet ? 20 : 16),
                       ),
-                      child: Icon(
-                        Icons.admin_panel_settings,
-                        size: isTablet ? 50 : 40,
-                        color: Colors.blue,
+                      child: Image.asset(
+                        'assets/icon/TrackX.png',
+                        width: isTablet ? 100 : 80,
+                        height: isTablet ? 100 : 80,
                       ),
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'School Transport Admin',
+                      'TrackX',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Colors.white,

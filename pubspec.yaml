@@ -101,6 +101,13 @@ dev_dependencies:
   json_serializable: ^6.11.3
   auto_route_generator: ^10.4.0
   build_runner: ^2.10.4
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/TrackX.png"
+  remove_alpha_ios: true
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -112,6 +119,8 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  assets:
+    - assets/icon/TrackX.png
 
 
   # To add assets to your application, add an assets section, like this:

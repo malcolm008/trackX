@@ -213,7 +213,7 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
           children: [
             // Header with stats - Responsive layout
             _buildStatsHeader(isDesktop, isTablet),
-            const SizedBox(height: 24),
+            const SizedBox(height: 10),
 
             // Tabs - Responsive font size
             Container(
@@ -233,7 +233,7 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
                 isScrollable: !isDesktop,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
 
             // Tab content
             Expanded(
@@ -283,25 +283,25 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
           'Total Revenue',
           '\$${totalRevenue.toStringAsFixed(2)}/month',
           Icons.attach_money,
-          Colors.green,
+          Colors.teal,
         ),
         _buildStatCard(
           'Active Subscriptions',
           activeSubscriptions.toString(),
           Icons.subscriptions,
-          Colors.blue,
+          Colors.deepPurpleAccent.shade100,
         ),
         _buildStatCard(
           'Upcoming Renewals',
           upcomingRenewals.toString(),
           Icons.calendar_today,
-          Colors.orange,
+          Colors.orange.shade200,
         ),
         _buildStatCard(
           'Annual Revenue',
           '\$${(totalRevenue * 12).toStringAsFixed(2)}',
           Icons.bar_chart,
-          Colors.purple,
+          Colors.purpleAccent,
         ),
       ],
     );
@@ -598,7 +598,7 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
                       '${entry.key}: ${entry.value}',
                       style: TextStyle(fontSize: isDesktop ? 12 : 10),
                     ),
-                    backgroundColor: Colors.blue[50],
+                    backgroundColor: Colors.teal,
                   );
                 }).toList(),
               ),
@@ -1090,11 +1090,11 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'active':
-        return Colors.green;
+        return Colors.teal;
       case 'pending':
-        return Colors.orange;
+        return Colors.orange.shade200;
       case 'cancelled':
-        return Colors.red;
+        return Colors.pinkAccent;
       default:
         return Colors.grey;
     }
@@ -1283,7 +1283,7 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
   void _assignPlan(Map<String, dynamic> plan) {
     showDialog(
       context: context,
-      builder: (context) => AssignPlaPnDialog(plan: plan),
+      builder: (context) => AssignPlanDialog(plan: plan),
     );
   }
 
@@ -2359,8 +2359,8 @@ class InvoiceDetailsDialog extends StatelessWidget {
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
-                              textAlign: TextAlign.center,
                             ),
+                              textAlign: TextAlign.center,
                           ),
                         ),
                         Expanded(
@@ -2369,8 +2369,8 @@ class InvoiceDetailsDialog extends StatelessWidget {
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
-                              textAlign: TextAlign.right,
                             ),
+                            textAlign: TextAlign.right,
                           ),
                         ),
                         Expanded(
@@ -2379,8 +2379,8 @@ class InvoiceDetailsDialog extends StatelessWidget {
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
-                              textAlign: TextAlign.right,
                             ),
+                            textAlign: TextAlign.right,
                           ),
                         ),
                       ],
@@ -2578,7 +2578,7 @@ class InvoiceDetailsDialog extends StatelessWidget {
             if (status != 'paid') ...[
               OutlinedButton.icon(
                 onPressed: () {
-                  _sendPaymentReminder();
+                  _sendPaymentReminder(context);
                   Navigator.pop(context);
                 },
                 icon: const Icon(Icons.email, size: 16),
@@ -2587,7 +2587,7 @@ class InvoiceDetailsDialog extends StatelessWidget {
               const SizedBox(width: 8),
               ElevatedButton.icon(
                 onPressed: () {
-                  _markAsPaid();
+                  _markAsPaid(context);
                   Navigator.pop(context);
                 },
                 icon: const Icon(Icons.check, size: 16),
@@ -2596,7 +2596,7 @@ class InvoiceDetailsDialog extends StatelessWidget {
             ],
             const Spacer(),
             OutlinedButton.icon(
-              onPressed: () => _downloadInvoice(),
+              onPressed: () => _downloadInvoice(context),
               icon: const Icon(Icons.download, size: 16),
               label: const Text('Download'),
             ),
@@ -2614,11 +2614,11 @@ class InvoiceDetailsDialog extends StatelessWidget {
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'paid':
-        return Colors.green;
+        return Colors.teal;
       case 'overdue':
-        return Colors.red;
+        return Colors.pinkAccent;
       case 'pending':
-        return Colors.orange;
+        return Colors.orange.shade200;
       default:
         return Colors.grey;
     }
@@ -2630,7 +2630,7 @@ class InvoiceDetailsDialog extends StatelessWidget {
     return '${dueDate.day}/${dueDate.month}/${dueDate.year}';
   }
 
-  void _sendPaymentReminder() {
+  void _sendPaymentReminder(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Payment reminder sent for invoice ${invoice['id']}'),
@@ -2639,7 +2639,7 @@ class InvoiceDetailsDialog extends StatelessWidget {
     );
   }
 
-  void _markAsPaid() {
+  void _markAsPaid(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Invoice ${invoice['id']} marked as paid'),
@@ -2648,7 +2648,7 @@ class InvoiceDetailsDialog extends StatelessWidget {
     );
   }
 
-  void _downloadInvoice() {
+  void _downloadInvoice(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Downloading invoice ${invoice['id']}...'),

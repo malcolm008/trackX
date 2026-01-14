@@ -152,16 +152,16 @@ class _AdminResponsiveLayoutState extends State<AdminResponsiveLayout> {
             child: Row(
               children: [
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: 60,
+                  height: 60,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary,
+                    color: Theme.of(context).colorScheme.onSurface,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(
-                    Icons.admin_panel_settings,
-                    color: Colors.white,
-                    size: 24,
+                  child: Image.asset(
+                    'assets/icon/TrackX.png',
+                    width: 80,
+                    height: 80,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -170,7 +170,7 @@ class _AdminResponsiveLayoutState extends State<AdminResponsiveLayout> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'School Transport',
+                        'TrackX',
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),

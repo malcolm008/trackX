@@ -41,18 +41,17 @@ class AuthLayout extends StatelessWidget {
                         width: 80,
                         height: 80,
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
+                          color: Theme.of(context).colorScheme.onSurface,
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: const Icon(
-                          Icons.directions_bus,
-                          color: Colors.white,
-                          size: 40,
+                        child: Image.asset(
+                          'assets/icon/TrackX.png',
+                          fit: BoxFit.contain,
                         ),
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'School Transport',
+                        'TrackX',
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),

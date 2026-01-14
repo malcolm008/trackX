@@ -133,7 +133,7 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
 
         // Stats Grid
         _buildStatsGrid(context),
-        const SizedBox(height: 24),
+        const SizedBox(height: 15),
 
         // Filters Card
         Card(
@@ -196,7 +196,7 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 10),
 
         // Schools Table
         Expanded(
@@ -482,166 +482,168 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
   }
 
   Widget _buildDesktopTable() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(1),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: SizedBox(
-            width: MediaQuery.of(context).size.width - 48,
-            child: DataTable(
-              dataRowHeight: 70,
-              columnSpacing: 20,
-              columns: const [
-                DataColumn(label: Text('School')),
-                DataColumn(label: Text('Contact')),
-                DataColumn(label: Text('Stats')),
-                DataColumn(label: Text('Status')),
-                DataColumn(label: Text('Subscription')),
-                DataColumn(label: Text('Created')),
-                DataColumn(label: Text('Actions')),
-              ],
-              rows: _schools.map((school) {
-                return DataRow(
-                  cells: [
-                    DataCell(
-                      SizedBox(
-                        width: 200,
-                        child: ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: CircleAvatar(
-                            backgroundColor: Colors.blue.withOpacity(0.1),
-                            child: const Icon(Icons.school, size: 20, color: Colors.blue),
+    return SingleChildScrollView(
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(1),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width - 48,
+              child: DataTable(
+                dataRowHeight: 70,
+                columnSpacing: 20,
+                columns: const [
+                  DataColumn(label: Text('School')),
+                  DataColumn(label: Text('Contact')),
+                  DataColumn(label: Text('Stats')),
+                  DataColumn(label: Text('Status')),
+                  DataColumn(label: Text('Subscription')),
+                  DataColumn(label: Text('Created')),
+                  DataColumn(label: Text('Actions')),
+                ],
+                rows: _schools.map((school) {
+                  return DataRow(
+                    cells: [
+                      DataCell(
+                        SizedBox(
+                          width: 200,
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: CircleAvatar(
+                              backgroundColor: Colors.blue.withOpacity(0.1),
+                              child: const Icon(Icons.school, size: 20, color: Colors.blue),
+                            ),
+                            title: Text(school['name'], overflow: TextOverflow.ellipsis),
+                            subtitle: Text(school['address'], overflow: TextOverflow.ellipsis),
                           ),
-                          title: Text(school['name'], overflow: TextOverflow.ellipsis),
-                          subtitle: Text(school['address'], overflow: TextOverflow.ellipsis),
                         ),
                       ),
-                    ),
-                    DataCell(
-                      SizedBox(
-                        width: 180,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
+                      DataCell(
+                        SizedBox(
+                          width: 180,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(school['email'], overflow: TextOverflow.ellipsis),
+                              Text(school['phone'], overflow: TextOverflow.ellipsis),
+                            ],
+                          ),
+                        ),
+                      ),
+                      DataCell(
+                        Row(
                           children: [
-                            Text(school['email'], overflow: TextOverflow.ellipsis),
-                            Text(school['phone'], overflow: TextOverflow.ellipsis),
+                            Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  school['students'].toString(),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const Text(
+                                  'Students',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(width: 16),
+                            Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  school['buses'].toString(),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const Text(
+                                  'Buses',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
-                    ),
-                    DataCell(
-                      Row(
-                        children: [
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                school['students'].toString(),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const Text(
-                                'Students',
-                                style: TextStyle(fontSize: 12, color: Colors.grey),
-                              ),
-                            ],
+                      DataCell(
+                        Chip(
+                          label: Text(school['status'].toString().capitalize()),
+                          backgroundColor: _getStatusColor(school['status']).withOpacity(0.1),
+                          labelStyle: TextStyle(
+                            color: _getStatusColor(school['status']),
+                            fontSize: 12,
                           ),
-                          const SizedBox(width: 16),
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                school['buses'].toString(),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const Text(
-                                'Buses',
-                                style: TextStyle(fontSize: 12, color: Colors.grey),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    DataCell(
-                      Chip(
-                        label: Text(school['status'].toString().capitalize()),
-                        backgroundColor: _getStatusColor(school['status']).withOpacity(0.1),
-                        labelStyle: TextStyle(
-                          color: _getStatusColor(school['status']),
-                          fontSize: 12,
                         ),
                       ),
-                    ),
-                    DataCell(
-                      Chip(
-                        label: Text(school['subscription']),
-                        backgroundColor: _getSubscriptionColor(school['subscription']).withOpacity(0.1),
-                        labelStyle: TextStyle(
-                          color: _getSubscriptionColor(school['subscription']),
-                          fontSize: 12,
+                      DataCell(
+                        Chip(
+                          label: Text(school['subscription']),
+                          backgroundColor: _getSubscriptionColor(school['subscription']).withOpacity(0.1),
+                          labelStyle: TextStyle(
+                            color: _getSubscriptionColor(school['subscription']),
+                            fontSize: 12,
+                          ),
                         ),
                       ),
-                    ),
-                    DataCell(Text(school['created'])),
-                    DataCell(
-                      PopupMenuButton(
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(
-                            value: 'view',
-                            child: ListTile(
-                              leading: Icon(Icons.remove_red_eye),
-                              title: Text('View Details'),
+                      DataCell(Text(school['created'])),
+                      DataCell(
+                        PopupMenuButton(
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'view',
+                              child: ListTile(
+                                leading: Icon(Icons.remove_red_eye),
+                                title: Text('View Details'),
+                              ),
                             ),
-                          ),
-                          const PopupMenuItem(
-                            value: 'edit',
-                            child: ListTile(
-                              leading: Icon(Icons.edit),
-                              title: Text('Edit School'),
+                            const PopupMenuItem(
+                              value: 'edit',
+                              child: ListTile(
+                                leading: Icon(Icons.edit),
+                                title: Text('Edit School'),
+                              ),
                             ),
-                          ),
-                          const PopupMenuItem(
-                            value: 'subscription',
-                            child: ListTile(
-                              leading: Icon(Icons.subscriptions),
-                              title: Text('Manage Subscription'),
+                            const PopupMenuItem(
+                              value: 'subscription',
+                              child: ListTile(
+                                leading: Icon(Icons.subscriptions),
+                                title: Text('Manage Subscription'),
+                              ),
                             ),
-                          ),
-                          const PopupMenuItem(
-                            value: 'users',
-                            child: ListTile(
-                              leading: Icon(Icons.people),
-                              title: Text('Manage Users'),
+                            const PopupMenuItem(
+                              value: 'users',
+                              child: ListTile(
+                                leading: Icon(Icons.people),
+                                title: Text('Manage Users'),
+                              ),
                             ),
-                          ),
-                          const PopupMenuItem(
-                            value: 'buses',
-                            child: ListTile(
-                              leading: Icon(Icons.directions_bus),
-                              title: Text('Manage Buses'),
+                            const PopupMenuItem(
+                              value: 'buses',
+                              child: ListTile(
+                                leading: Icon(Icons.directions_bus),
+                                title: Text('Manage Buses'),
+                              ),
                             ),
-                          ),
-                          const PopupMenuItem(
-                            value: 'delete',
-                            child: ListTile(
-                              leading: Icon(Icons.delete, color: Colors.red),
-                              title: Text('Delete', style: TextStyle(color: Colors.red)),
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: ListTile(
+                                leading: Icon(Icons.delete, color: Colors.red),
+                                title: Text('Delete', style: TextStyle(color: Colors.red)),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                );
-              }).toList(),
+                    ],
+                  );
+                }).toList(),
+              ),
             ),
           ),
         ),

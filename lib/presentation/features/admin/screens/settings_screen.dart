@@ -92,6 +92,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final bool isDesktop = MediaQuery.of(context).size.width >= 1024;
     final bool isTablet = MediaQuery.of(context).size.width >= 768;
 
+    return isDesktop ? _buildDesktopLayout(context) : _buildMobileLayout(context);
+  }
+
+  Widget _buildDesktopLayout(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -116,51 +120,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(height: 24),
 
-        if (isDesktop)
-        // Desktop Layout - Grid
-          Expanded(
-            child: GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 24,
-                mainAxisSpacing: 24,
-                childAspectRatio: 1.5,
-              ),
-              itemCount: _settingsSections.length,
-              itemBuilder: (context, index) {
-                final section = _settingsSections[index];
-                return _buildSettingsSection(section, context);
-              },
+        // Desktop Grid
+        Expanded(
+          child: GridView.builder(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 24,
+              mainAxisSpacing: 24,
+              childAspectRatio: 1.4,
             ),
-          )
-        else if (isTablet)
-        // Tablet Layout - Grid with 2 columns
-          Expanded(
-            child: GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 1.8,
-              ),
-              itemCount: _settingsSections.length,
-              itemBuilder: (context, index) {
-                final section = _settingsSections[index];
-                return _buildSettingsSection(section, context);
-              },
-            ),
-          )
-        else
-        // Mobile Layout - List
-          Expanded(
-            child: ListView.builder(
-              itemCount: _settingsSections.length,
-              itemBuilder: (context, index) {
-                final section = _settingsSections[index];
-                return _buildSettingsSection(section, context);
-              },
-            ),
+            itemCount: _settingsSections.length,
+            itemBuilder: (context, index) {
+              final section = _settingsSections[index];
+              return _buildSettingsSection(section, context, true);
+            },
           ),
+        ),
 
         // Save Button
         Padding(
@@ -193,10 +168,83 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSettingsSection(Map<String, dynamic> section, BuildContext context) {
-    return Card(
+  Widget _buildMobileLayout(BuildContext context) {
+    final bool isTablet = MediaQuery.of(context).size.width >= 768;
+
+    return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(isTablet ? 24 : 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'System Settings',
+                  style: TextStyle(
+                    fontSize: isTablet ? 24 : 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Configure system preferences and administration settings',
+                  style: TextStyle(
+                    fontSize: isTablet ? 14 : 13,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // Mobile/Tablet List
+            ..._settingsSections.map((section) {
+              return _buildSettingsSection(section, context, false);
+            }).toList(),
+
+            const SizedBox(height: 24),
+
+            // Save Button
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                OutlinedButton(
+                  onPressed: () {
+                    // Reset to defaults
+                  },
+                  child: const Text('Reset to Defaults'),
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Settings saved successfully'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  },
+                  child: const Text('Save Changes'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsSection(Map<String, dynamic> section, BuildContext context, bool isDesktop) {
+    final bool isTablet = MediaQuery.of(context).size.width >= 768;
+
+    return Card(
+      margin: EdgeInsets.only(bottom: isDesktop ? 0 : 16),
+      child: Padding(
+        padding: EdgeInsets.all(isDesktop ? 16 : (isTablet ? 14 : 12)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -204,7 +252,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: EdgeInsets.all(isDesktop ? 8 : 6),
                   decoration: BoxDecoration(
                     color: section['color'].withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -212,77 +260,78 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Icon(
                     section['icon'],
                     color: section['color'],
-                    size: 20,
+                    size: isDesktop ? 20 : 18,
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: isDesktop ? 12 : 10),
                 Text(
                   section['title'],
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 18,
+                    fontSize: isDesktop ? 18 : (isTablet ? 16 : 15),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: isDesktop ? 16 : 12),
 
             // Settings Items
-            Expanded(
-              child: ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: section['items'].length,
-                itemBuilder: (context, index) {
-                  final item = section['items'][index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _buildSettingsItem(item),
-                  );
-                },
-              ),
-            ),
+            ...List.generate(section['items'].length, (index) {
+              final item = section['items'][index];
+              return Padding(
+                padding: EdgeInsets.only(bottom: isDesktop ? 12 : 10),
+                child: _buildSettingsItem(item, isDesktop, isTablet),
+              );
+            }),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSettingsItem(Map<String, dynamic> item) {
+  Widget _buildSettingsItem(Map<String, dynamic> item, bool isDesktop, bool isTablet) {
     switch (item['type']) {
       case 'switch':
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(item['title']),
+            Text(
+              item['title'],
+              style: TextStyle(fontSize: isDesktop ? 14 : (isTablet ? 13 : 12)),
+            ),
             Switch(
-              value: item['value'],
+              value: item['value'] as bool,
               onChanged: (value) {},
             ),
           ],
         );
       case 'dropdown':
+      // Fixed: Explicitly type the map function
+        final List<String> options = (item['options'] as List<dynamic>).cast<String>();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               item['title'],
-              style: const TextStyle(fontSize: 14),
+              style: TextStyle(fontSize: isDesktop ? 14 : (isTablet ? 13 : 12)),
             ),
             const SizedBox(height: 4),
             DropdownButtonFormField<String>(
-              value: item['options'][0],
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              value: options[0],
+              decoration: InputDecoration(
+                border: const OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: isDesktop ? 12 : 10,
+                  vertical: isDesktop ? 8 : 6,
+                ),
               ),
-              items: item['options'].map((option) {
-                return DropdownMenuItem(
+              items: options.map<DropdownMenuItem<String>>((String option) {
+                return DropdownMenuItem<String>(
                   value: option,
-                  child: Text(option),
+                  child: Text(option, style: TextStyle(fontSize: isDesktop ? 14 : 13)),
                 );
               }).toList(),
-              onChanged: (value) {},
+              onChanged: (String? value) {},
             ),
           ],
         );
@@ -293,15 +342,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             Text(
               item['title'],
-              style: const TextStyle(fontSize: 14),
+              style: TextStyle(fontSize: isDesktop ? 14 : (isTablet ? 13 : 12)),
             ),
             const SizedBox(height: 4),
             TextField(
-              controller: TextEditingController(text: item['value']),
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              controller: TextEditingController(text: item['value'] as String),
+              decoration: InputDecoration(
+                border: const OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: isDesktop ? 12 : 10,
+                  vertical: isDesktop ? 8 : 6,
+                ),
               ),
+              style: TextStyle(fontSize: isDesktop ? 14 : 13),
             ),
           ],
         );

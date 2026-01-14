@@ -1,3 +1,5 @@
+import 'package:bustracker_007/presentation/features/admin/screens/analytics_screen.dart';
+import 'package:bustracker_007/presentation/features/admin/screens/billing_screen.dart';
 import 'package:flutter/material.dart';
 import 'admin_responsive_layout.dart';
 import 'screens/subscriptions_screen.dart';
@@ -22,6 +24,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     'Users',
     'Schools',
     'Live Map',
+    'Billing',
+    'Analytics',
     'Settings',
   ];
 
@@ -31,6 +35,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     const UsersScreen(),
     const SchoolsScreen(),
     const LiveMapScreen(),
+    const BillingScreen(),
+    const AnalyticsScreen(),
     const SettingsScreen(),
   ];
 

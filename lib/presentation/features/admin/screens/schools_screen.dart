@@ -414,7 +414,7 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
         crossAxisCount: isDesktop ? 6 : (isTablet ? 3 : 2),
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        childAspectRatio: isDesktop ? 1.5 : 1.1,
+        childAspectRatio: isDesktop ? 1.2 : 1.1,
       ),
       itemCount: _stats.length,
       itemBuilder: (context, index) {

@@ -86,7 +86,7 @@ class _StatusScreenState extends State<StatusScreen> {
           children: [
             Container(
               padding: const EdgeInsets.all(16),
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.05),
+              color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.05),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -164,11 +164,11 @@ class _StatusScreenState extends State<StatusScreen> {
             ),
 
             Container(
-              color: Theme.of(context).colorScheme.surfaceContainer,
+              color: Theme.of(context).colorScheme.primaryContainer,
               child: const TabBar(
-                labelColor: Colors.blue,
+                labelColor: Color(0xFF995BA3),
                 unselectedLabelColor: Colors.grey,
-                indicatorColor: Colors.blue,
+                indicatorColor: Color(0xFF995BA3),
                 tabs: [
                   Tab(text: 'Today\'s Status'),
                   Tab(text: 'History'),
@@ -216,9 +216,9 @@ class _StatusScreenState extends State<StatusScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildStatusCircle('Present', Colors.green, 1),
-                      _buildStatusCircle('Absent', Colors.red, 1),
-                      _buildStatusCircle('Late', Colors.orange, 0),
+                      _buildStatusCircle('Present', Colors.teal, 1),
+                      _buildStatusCircle('Absent', Colors.pinkAccent, 1),
+                      _buildStatusCircle('Late', Color(0xFFFFAB91), 0),
                     ],
                   ),
                 ],
@@ -289,7 +289,7 @@ class _StatusScreenState extends State<StatusScreen> {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.teal[400],
+                          color: Theme.of(context).colorScheme.primaryContainer,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
@@ -596,11 +596,11 @@ class _StatusScreenState extends State<StatusScreen> {
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'present':
-        return Colors.green;
+        return Colors.teal;
       case 'absent':
-        return Colors.red;
+        return Colors.pinkAccent;
       case 'late':
-        return Colors.orange;
+        return Color(0xFFFFAB91);
       default:
         return Colors.grey;
     }

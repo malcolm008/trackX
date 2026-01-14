@@ -34,6 +34,15 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     const SettingsScreen(),
   ];
 
+  void _handleNavigation(String screenTitle) {
+    final index = _screenTitles.indexOf(screenTitle);
+    if (index != -1) {
+      setState(() {
+        _currentIndex = index;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AdminResponsiveLayout(
@@ -52,6 +61,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         ),
         const SizedBox(width: 8),
       ],
+      onNavigationSelected: _handleNavigation,
     );
   }
 }

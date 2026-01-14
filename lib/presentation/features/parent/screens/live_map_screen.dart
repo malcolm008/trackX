@@ -64,44 +64,35 @@ class _ParentLiveMapScreenState extends State<ParentLiveMapScreen> {
         // Child Selector
         Container(
           padding: const EdgeInsets.all(16),
-          color: Theme.of(context).colorScheme.primary.withOpacity(0.05),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.05),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text(
-                'Live Bus Tracking',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Track your child\'s bus in real-time',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Child Selection
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: List.generate(_childRoutes.length, (index) {
-                  final route = _childRoutes[index];
-                  return ChoiceChip(
-                    label: Text(route['student']),
-                    selected: _selectedChildIndex == index,
-                    onSelected: (selected) {
-                      setState(() {
-                        _selectedChildIndex = index;
-                      });
-                    },
-                  );
-                }),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 12),
+                  // Child Selection
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: List.generate(_childRoutes.length, (index) {
+                      final route = _childRoutes[index];
+                      return ChoiceChip(
+                        label: Text(route['student']),
+                        selected: _selectedChildIndex == index,
+                        onSelected: (selected) {
+                          setState(() {
+                            _selectedChildIndex = index;
+                          });
+                        },
+                      );
+                    }),
+                  ),
+                ],
               ),
             ],
-          ),
+          )
         ),
 
         Expanded(
@@ -150,7 +141,7 @@ class _ParentLiveMapScreenState extends State<ParentLiveMapScreen> {
                         right: 12,
                         child: FloatingActionButton.small(
                           onPressed: () {},
-                          child: const Icon(Icons.my_location),
+                          child: const Icon(Icons.my_location, color: Colors.purple,),
                         ),
                       ),
                       // Bus Indicator
@@ -314,7 +305,7 @@ class _ParentLiveMapScreenState extends State<ParentLiveMapScreen> {
                           ListTile(
                             contentPadding: EdgeInsets.zero,
                             leading: const CircleAvatar(
-                              child: Icon(Icons.person),
+                              child: Icon(Icons.person, color: Colors.deepPurple,),
                             ),
                             title: Text(
                               selectedRoute['driver'],
@@ -423,7 +414,7 @@ class _ParentLiveMapScreenState extends State<ParentLiveMapScreen> {
     switch (status) {
       case 'completed':
         icon = Icons.check_circle;
-        color = Colors.green;
+        color = Colors.teal;
         break;
       case 'current':
         icon = Icons.radio_button_checked;
@@ -625,7 +616,7 @@ class _ParentLiveMapScreenState extends State<ParentLiveMapScreen> {
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'moving':
-        return Colors.green;
+        return Colors.teal;
       case 'stopped':
         return Colors.blue;
       case 'delayed':

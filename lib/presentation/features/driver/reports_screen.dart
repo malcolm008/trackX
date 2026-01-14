@@ -92,50 +92,23 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ),
       body: Column(
         children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.05),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Incident Reports',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Report issues and incidents during your route',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
           // Quick Stats
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
                 Expanded(
-                  child: _buildReportStat('Pending', Icons.pending, Colors.orange,
+                  child: _buildReportStat('Pending', Icons.pending, Color(0xFFFF9F7B),
                       _reports.where((r) => r['status'] == 'pending').length),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _buildReportStat('In Progress', Icons.build, Colors.blue,
+                  child: _buildReportStat('In Progress', Icons.build, Colors.deepPurpleAccent.shade100,
                       _reports.where((r) => r['status'] == 'in_progress').length),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _buildReportStat('Resolved', Icons.check_circle, Colors.green,
+                  child: _buildReportStat('Resolved', Icons.check_circle, Colors.teal,
                       _reports.where((r) => r['status'] == 'resolved').length),
                 ),
               ],
@@ -324,7 +297,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.grey[50],
+                              color: Theme.of(context).colorScheme.primaryContainer,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
@@ -933,15 +906,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Color _getTypeColor(String type) {
     switch (type) {
       case 'mechanical':
-        return Colors.red;
+        return Colors.pinkAccent;
       case 'traffic':
-        return Colors.orange;
+        return Colors.orange.shade300;
       case 'safety':
-        return Colors.purple;
+        return Colors.purpleAccent;
       case 'student_issue':
-        return Colors.blue;
+        return Colors.blue.shade300;
       case 'weather':
-        return Colors.cyan;
+        return Colors.cyan.shade200;
       case 'other':
         return Colors.grey;
       default:
@@ -971,11 +944,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Color _getStatusColor(String status) {
     switch (status) {
       case 'pending':
-        return Colors.orange;
+        return Color(0xFFFF9F7B);
       case 'in_progress':
-        return Colors.blue;
+        return Colors.deepPurpleAccent.shade100;
       case 'resolved':
-        return Colors.green;
+        return Colors.teal;
       case 'closed':
         return Colors.grey;
       default:

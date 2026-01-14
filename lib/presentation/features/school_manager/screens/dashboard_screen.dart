@@ -1,3 +1,5 @@
+import 'package:bustracker_007/presentation/features/school_manager/screens/live_map_screen.dart';
+import 'package:bustracker_007/presentation/features/school_manager/screens/student_assignment_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:bustracker_007/presentation/widgets/cards/stat_card.dart';
 import 'bus_management_screen.dart';
@@ -18,8 +20,8 @@ class _SchoolManagerHomeState extends State<SchoolManagerHome> {
     const DashboardScreen(),
     const BusManagementScreen(),
     const RouteManagementScreen(),
-    Container(color: Colors.blue), // Student assignment screen
-    Container(color: Colors.purple), // Live map screen
+    const StudentAssignmentScreen(), // Student assignment screen
+    const SchoolLiveMapScreen(), // Live map screen
   ];
 
   @override
@@ -27,6 +29,7 @@ class _SchoolManagerHomeState extends State<SchoolManagerHome> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('School Manager Dashboard'),
+        titleTextStyle: TextStyle(fontSize: 18),
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
@@ -86,37 +89,43 @@ class DashboardScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 16),
-          Wrap(
-            spacing: 20,
-            runSpacing: 16,
+          Column(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              StatCard(
-                title: 'Total Buses',
-                value: '24',
-                icon: Icons.directions_bus,
-                color: Colors.blue,
-                onTap: () {},
-              ),
-              StatCard(
-                title: 'Active Drivers',
-                value: '18',
-                icon: Icons.person,
-                color: Colors.green,
-                onTap: () {},
-              ),
-              StatCard(
-                title: 'Total Routes',
-                value: '12',
-                icon: Icons.route,
-                color: Colors.orange,
-                onTap: () {},
-              ),
-              StatCard(
-                title: 'Active Students',
-                value: '485',
-                icon: Icons.school,
-                color: Colors.purple,
-                onTap: () {},
+              Wrap(
+                spacing: 20,
+                runSpacing: 16,
+                children: [
+                  StatCard(
+                    title: 'Total Buses',
+                    value: '24',
+                    icon: Icons.directions_bus,
+                    color: Colors.blue,
+                    onTap: () {},
+                  ),
+                  StatCard(
+                    title: 'Active Drivers',
+                    value: '18',
+                    icon: Icons.person,
+                    color: Colors.green,
+                    onTap: () {},
+                  ),
+                  StatCard(
+                    title: 'Total Routes',
+                    value: '12',
+                    icon: Icons.route,
+                    color: Colors.orange,
+                    onTap: () {},
+                  ),
+                  StatCard(
+                    title: 'Active Students',
+                    value: '485',
+                    icon: Icons.school,
+                    color: Colors.purple,
+                    onTap: () {},
+                  ),
+                ],
               ),
             ],
           ),

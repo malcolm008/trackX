@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const Color primaryColor = Color(0xFF4F46E5);
-  static const Color secondaryColor = Color(0xFF10B981);
+  static const Color primaryColor = Color(0xFF9B27AF);
+  static const Color secondaryColor = Color(0xFF88E5FF);
   static const Color accentColor = Color(0xFFF59E0B);
   static const Color errorColor = Color(0xFFEF4444);
   static const Color successColor = Color(0xFF10B981);
   static const Color warningColor = Color(0xFFF59E0B);
+  static const Color lightIconColor = Color(0xFF086F9A);
+  static const Color darkIconColor = Color(0xFF623693);
+  static const Color pushNotifications = Colors.tealAccent;
 
   // Colors for light theme
   static const Color lightBackground = Color(0xFFF9FAFB);
@@ -14,13 +17,15 @@ class AppTheme {
   static const Color lightOnSurface = Color(0xFF111827);
   static const Color lightOnSurfaceVariant = Color(0xFF374151);
   static const Color lightOutline = Color(0xFFD1D5DB);
+  static const Color lightSub = Color(0xFFF8F8F8);
 
   // Colors for dark theme
-  static const Color darkBackground = Color(0xFF111827);
-  static const Color darkSurface = Color(0xFF1F2937);
+  static const Color darkBackground = Color(0xFF1E1E1E);
+  static const Color darkSurface = Color(0xFF292828);
   static const Color darkOnSurface = Color(0xFFFFFFFF);
   static const Color darkOnSurfaceVariant = Color(0xFF9CA3AF);
   static const Color darkOutline = Color(0xFF374151);
+  static const Color darkSub = Color(0xFF303030);
 
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
@@ -33,6 +38,8 @@ class AppTheme {
       background: lightBackground,
       surface: lightSurface,
       onSurface: lightOnSurface,
+      primaryContainer: lightSurface,
+      surfaceContainer: lightSub,
     ),
     scaffoldBackgroundColor: lightBackground,
     appBarTheme: const AppBarTheme(
@@ -88,6 +95,8 @@ class AppTheme {
       background: darkBackground,
       surface: darkSurface,
       onSurface: darkOnSurface,
+      primaryContainer: darkSurface,
+      surfaceContainer: lightSub,
     ),
     scaffoldBackgroundColor: darkBackground,
     appBarTheme: const AppBarTheme(

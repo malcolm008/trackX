@@ -84,59 +84,6 @@ class _AssignedStudentsScreenState extends State<AssignedStudentsScreen> {
     return Scaffold(
       body: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.05),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.people,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Assigned Students',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Total: ${_students.length} students',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Text(
-                    'Bus B-101',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -190,15 +137,15 @@ class _AssignedStudentsScreenState extends State<AssignedStudentsScreen> {
             child: Row(
               children: [
                 Expanded(
-                  child: _buildStudentStat('On Board', Icons.check_circle, Colors.green, _students.where((s) => s['status'] == 'on_board').length),
+                  child: _buildStudentStat('On Board', Icons.check_circle, Colors.teal, _students.where((s) => s['status'] == 'on_board').length),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _buildStudentStat('To Pickup', Icons.pending, Colors.orange, _students.where((s) => s['status'] == 'not_boarded').length),
+                  child: _buildStudentStat('To Pickup', Icons.pending, Color(0xFFFF9F7B), _students.where((s) => s['status'] == 'not_boarded').length),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _buildStudentStat('Absent', Icons.cancel, Colors.red, _students.where((s) => s['status'] == 'absent').length),
+                  child: _buildStudentStat('Absent', Icons.cancel, Colors.pinkAccent, _students.where((s) => s['status'] == 'absent').length),
                 ),
               ],
             ),
@@ -279,7 +226,7 @@ class _AssignedStudentsScreenState extends State<AssignedStudentsScreen> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.grey[50],
+                            color: Theme.of(context).colorScheme.primaryContainer,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
@@ -428,11 +375,11 @@ class _AssignedStudentsScreenState extends State<AssignedStudentsScreen> {
   Color _getStatusColor(String status) {
     switch (status) {
       case 'on_board':
-        return Colors.green;
+        return Colors.teal;
       case 'not_boarded':
-        return Colors.green;
+        return Color(0xFFFF9F7B);
       case 'absent':
-        return Colors.red;
+        return Colors.pinkAccent;
       default:
         return Colors.grey;
     }

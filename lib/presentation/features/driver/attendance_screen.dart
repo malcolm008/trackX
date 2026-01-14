@@ -87,33 +87,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       ),
       body: Column(
         children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.05),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Mark Attendance',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Mark student pickup and drop attendance',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
           // Date and Shift Selector
           Card(
             margin: const EdgeInsets.all(16),
@@ -200,22 +173,22 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             child: Row(
               children: [
                 Expanded(
-                  child: _buildAttendanceStat('Present', Colors.green,
+                  child: _buildAttendanceStat('Present', Colors.teal,
                       _attendanceList.where((a) => a[_selectedShift] == 'present').length),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _buildAttendanceStat('Absent', Colors.red,
+                  child: _buildAttendanceStat('Absent', Colors.pinkAccent,
                       _attendanceList.where((a) => a[_selectedShift] == 'absent').length),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _buildAttendanceStat('Late', Colors.orange,
+                  child: _buildAttendanceStat('Late', Color(0xFFFF9F7B),
                       _attendanceList.where((a) => a[_selectedShift] == 'late').length),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _buildAttendanceStat('Pending', Colors.blue,
+                  child: _buildAttendanceStat('Pending', Colors.deepPurpleAccent.shade100,
                       _attendanceList.where((a) => a[_selectedShift] == 'pending').length),
                 ),
               ],
@@ -702,13 +675,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   Color _getStatusColor(String status) {
     switch (status) {
       case 'present':
-        return Colors.green;
+        return Colors.teal;
       case 'absent':
-        return Colors.red;
+        return Colors.pinkAccent;
       case 'late':
-        return Colors.orange;
+        return Color(0xFFFF9F7B);
       case 'pending':
-        return Colors.blue;
+        return Colors.deepPurpleAccent.shade100;
       default:
         return Colors.grey;
     }

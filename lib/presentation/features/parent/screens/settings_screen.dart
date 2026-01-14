@@ -198,7 +198,7 @@ class _ParentSettingsScreenState extends State<ParentSettingsScreen> {
                     return ListTile(
                       leading: Icon(
                         Icons.location_on,
-                        color: location['isDefault'] ? Colors.green : Colors.blue,
+                        color: location['isDefault'] ? Colors.blue : Theme.of(context).colorScheme.primary,
                       ),
                       title: Text(location['name']),
                       subtitle: Text(location['address']),
@@ -208,8 +208,8 @@ class _ParentSettingsScreenState extends State<ParentSettingsScreen> {
                           if(location['isDefault'])
                             Chip(
                               label: const Text('Default'),
-                              backgroundColor: Colors.green.withOpacity(0.1),
-                              labelStyle: const TextStyle(color: Colors.green, fontSize: 12),
+                              backgroundColor: Colors.blue.withOpacity(0.1),
+                              labelStyle: const TextStyle(color: Colors.blue, fontSize: 12),
                             ),
                           IconButton(
                             icon: const Icon(Icons.edit, size: 18),
@@ -228,10 +228,10 @@ class _ParentSettingsScreenState extends State<ParentSettingsScreen> {
                     );
                   }),
                   ListTile(
-                    leading: Icon(Icons.add_location, color: Theme.of(context).colorScheme.primary),
+                    leading: Icon(Icons.add_location, color: Theme.of(context).colorScheme.onSurface),
                     title: Text(
                       'Add New Location',
-                      style: TextStyle(color: Theme.of(context).colorScheme.primary),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                     ),
                     onTap: () {
                       _showAddLocationDialog();
@@ -258,15 +258,15 @@ class _ParentSettingsScreenState extends State<ParentSettingsScreen> {
                       },
                       secondary: Icon(
                         _getReminderIcon(reminder['type']),
-                        color: Colors.blue,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     );
                   }),
                   ListTile(
-                    leading: Icon(Icons.add_alarm, color: Theme.of(context).colorScheme.primary),
+                    leading: Icon(Icons.add_alarm, color: Theme.of(context).colorScheme.onSurface),
                     title: Text(
                       'Add New Reminder',
-                      style: TextStyle(color: Theme.of(context).colorScheme.primary),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                     ),
                     onTap: () {
                       _showAddReminderDialog();

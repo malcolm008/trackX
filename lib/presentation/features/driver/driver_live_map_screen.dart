@@ -124,17 +124,17 @@ class _DriverLiveMapScreenState extends State<DriverLiveMapScreen> {
                     children: [
                       FloatingActionButton.small(
                         onPressed: () {},
-                        child: const Icon(Icons.zoom_in),
+                        child: const Icon(Icons.zoom_in, color: Colors.purpleAccent,),
                       ),
                       const SizedBox(height: 8),
                       FloatingActionButton.small(
                         onPressed: () {},
-                        child: const Icon(Icons.zoom_out),
+                        child: const Icon(Icons.zoom_out, color: Colors.purpleAccent),
                       ),
                       const SizedBox(height: 8),
                       FloatingActionButton.small(
                         onPressed: () {},
-                        child: const Icon(Icons.my_location),
+                        child: const Icon(Icons.my_location, color: Colors.purpleAccent),
                       ),
                     ],
                   ),
@@ -161,7 +161,7 @@ class _DriverLiveMapScreenState extends State<DriverLiveMapScreen> {
                       children: [
                         Icon(
                           Icons.directions_bus,
-                          color: _isTripActive ? Colors.green : Colors.orange,
+                          color: _isTripActive ? Colors.teal : Colors.pinkAccent,
                         ),
                         const SizedBox(width: 4),
                         const Text(
@@ -195,7 +195,7 @@ class _DriverLiveMapScreenState extends State<DriverLiveMapScreen> {
                         ),
                         child: Icon(
                           _isTripActive ? Icons.directions_bus : Icons.directions_bus_outlined,
-                          color: _isTripActive ? Colors.green : Colors.orange,
+                          color: _isTripActive ? Colors.teal : Colors.pinkAccent,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -475,7 +475,7 @@ class _DriverLiveMapScreenState extends State<DriverLiveMapScreen> {
     switch (stop['status']) {
       case 'completed':
         icon = Icons.check_circle;
-        color = Colors.green;
+        color = Colors.teal;
         break;
       case 'current':
         icon = Icons.radio_button_checked;

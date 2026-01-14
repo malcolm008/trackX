@@ -288,7 +288,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
           // Header Section
           Container(
             padding: const EdgeInsets.all(16),
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.05),
+            color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.05),
             child: Row(
               children: [
                 Icon(
@@ -302,11 +302,11 @@ class _StudentsScreenState extends State<StudentsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'My Students',
+                        'My Children',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -353,7 +353,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
                     'Total Students',
                     '${_students.length}',
                     Icons.people,
-                    Colors.blue,
+                    Colors.deepPurpleAccent,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -362,7 +362,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
                     'Active',
                     '${_students.where((s) => s['status'] == 'active').length}',
                     Icons.check_circle,
-                    Colors.green,
+                    Colors.teal,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -371,7 +371,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
                     'Schools',
                     '${Set.from(_students.map((s) => s['school'])).length}',
                     Icons.school,
-                    Colors.purple,
+                    Colors.purpleAccent,
                   ),
                 ),
               ],
@@ -506,11 +506,11 @@ class _StudentsScreenState extends State<StudentsScreen> {
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'active':
-        return Colors.green;
+        return Colors.teal;
       case 'inactive':
         return Colors.grey;
       default:
-        return Colors.orange;
+        return Color(0xFFFFAB91);
     }
   }
 }

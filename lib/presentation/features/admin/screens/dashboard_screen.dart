@@ -148,28 +148,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       'title': 'Total Revenue',
       'value': '\$42,580',
       'icon': Icons.attach_money,
-      'color': Colors.green,
+      'color': Colors.teal,
       'change': '+12.5%',
     },
     {
       'title': 'Active Schools',
       'value': '42',
       'icon': Icons.school,
-      'color': Colors.blue,
+      'color': Colors.deepPurpleAccent.shade100,
       'change': '+3',
     },
     {
       'title': 'Total Users',
       'value': '2,847',
       'icon': Icons.people,
-      'color': Colors.purple,
+      'color': Colors.purpleAccent,
       'change': '+125',
     },
     {
       'title': 'Active Subscriptions',
       'value': '38',
       'icon': Icons.subscriptions,
-      'color': Colors.orange,
+      'color': Color(0xFFFFAB91),
       'change': '+2',
     },
     {
@@ -183,14 +183,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       'title': 'Live Routes',
       'value': '89',
       'icon': Icons.route,
-      'color': Colors.teal,
+      'color': Colors.cyan,
       'change': '+12',
     },
     {
       'title': 'Support Tickets',
       'value': '14',
       'icon': Icons.support,
-      'color': Colors.red,
+      'color': Colors.pinkAccent,
       'change': '-3',
     },
     {
@@ -235,16 +235,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                     decoration: BoxDecoration(
                       color: change.contains('+') || change.contains('%')
-                          ? Colors.green.withOpacity(0.1)
-                          : Colors.red.withOpacity(0.1),
+                          ? Colors.teal.withOpacity(0.1)
+                          : Colors.pinkAccent.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       change,
                       style: TextStyle(
                         color: change.contains('+') || change.contains('%')
-                            ? Colors.green
-                            : Colors.red,
+                            ? Colors.teal
+                            : Colors.pinkAccent,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
@@ -444,15 +444,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Color _getActivityColor(String type) {
     switch (type) {
       case 'subscription':
-        return Colors.green;
-      case 'school':
-        return Colors.blue;
-      case 'payment':
-        return Colors.purple;
-      case 'system':
-        return Colors.orange;
-      case 'user':
         return Colors.teal;
+      case 'school':
+        return Colors.deepPurpleAccent.shade100;
+      case 'payment':
+        return Colors.purpleAccent;
+      case 'system':
+        return Color(0xFFFFAB91);
+      case 'user':
+        return Colors.cyanAccent;
       default:
         return Colors.grey;
     }
@@ -589,7 +589,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               Text(
                 status,
                 style: TextStyle(
-                  color: status == 'Operational' ? Colors.green : Colors.orange,
+                  color: status == 'Operational' ? Colors.teal : Color(0xFFFFAB91),
                   fontSize: 12,
                 ),
               ),
@@ -601,7 +601,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           child: LinearProgressIndicator(
             value: double.parse(value.replaceAll('%', '')) / 100,
             backgroundColor: Colors.grey[200],
-            color: status == 'Operational' ? Colors.green : Colors.orange,
+            color: status == 'Operational' ? Colors.teal : Color(0xFFFFAB91),
             borderRadius: BorderRadius.circular(4),
           ),
         ),
@@ -619,9 +619,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       case 'Premium':
         return Colors.purple;
       case 'Enterprise':
-        return Colors.blue;
+        return Colors.deepPurpleAccent.shade100;
       case 'Basic':
-        return Colors.green;
+        return Colors.tealAccent;
       default:
         return Colors.orange;
     }
@@ -630,11 +630,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Color _getStatusColor(String status) {
     switch (status) {
       case 'Active':
-        return Colors.green;
+        return Colors.teal;
       case 'Expiring':
-        return Colors.orange;
+        return Color(0xFFFFAB91);
       case 'Trial':
-        return Colors.blue;
+        return Colors.deepPurpleAccent.shade100;
       default:
         return Colors.grey;
     }

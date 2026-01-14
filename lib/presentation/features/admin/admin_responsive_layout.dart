@@ -1,4 +1,5 @@
 import 'package:bustracker_007/presentation/features/admin/screens/live_map_screen.dart';
+import 'package:bustracker_007/presentation/features/admin/screens/subscriptions_screen.dart';
 import 'package:flutter/material.dart';
 
 class AdminResponsiveLayout extends StatefulWidget {
@@ -8,6 +9,7 @@ class AdminResponsiveLayout extends StatefulWidget {
   final Widget? floatingActionButton;
   final Widget? drawer;
   final Widget? bottomNavigationBar;
+  final Function(String)? onNavigationSelected;
 
   const AdminResponsiveLayout({
     super.key,
@@ -17,6 +19,7 @@ class AdminResponsiveLayout extends StatefulWidget {
     this.floatingActionButton,
     this.drawer,
     this.bottomNavigationBar,
+    this.onNavigationSelected,
   });
 
   @override
@@ -54,7 +57,7 @@ class _AdminResponsiveLayoutState extends State<AdminResponsiveLayout> {
           Container(
             width: 280,
             color: Theme.of(context).brightness == Brightness.dark
-                ? const Color(0xFF1F2937)
+                ? const Color(0xFF2B2B2B)
                 : Colors.white,
             child: _buildAdminNavigation(context),
           ),
@@ -130,7 +133,7 @@ class _AdminResponsiveLayoutState extends State<AdminResponsiveLayout> {
   Widget _buildAdminNavigation(BuildContext context) {
     return Container(
       color: Theme.of(context).brightness == Brightness.dark
-          ? const Color(0xFF1F2937)
+          ? const Color(0xFF303030)
           : Colors.white,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,54 +199,31 @@ class _AdminResponsiveLayoutState extends State<AdminResponsiveLayout> {
                   Icons.dashboard,
                   'Dashboard',
                   isActive: true,
-                  onTap: () {},
+                  onTap: () => widget.onNavigationSelected?.call('Dashboard'),
                 ),
                 _buildNavItem(
                   context,
                   Icons.subscriptions,
                   'Subscriptions',
-                  onTap: () {},
+                  onTap: () => widget.onNavigationSelected?.call('Subscriptions'),
                 ),
                 _buildNavItem(
                   context,
                   Icons.people,
                   'Users',
-                  onTap: () {},
+                  onTap: () => widget.onNavigationSelected?.call('Users'),
                 ),
                 _buildNavItem(
                   context,
                   Icons.school,
                   'Schools',
-                  onTap: () {},
-                ),
-                _buildNavItem(
-                  context,
-                  Icons.business,
-                  'Organizations',
-                  onTap: () {},
-                ),
-                _buildNavItem(
-                  context,
-                  Icons.directions_bus,
-                  'Buses',
-                  onTap: () {},
-                ),
-                _buildNavItem(
-                  context,
-                  Icons.route,
-                  'Routes',
-                  onTap: () {},
+                  onTap: () => widget.onNavigationSelected?.call('Schools'),
                 ),
                 _buildNavItem(
                   context,
                   Icons.map,
                   'Live Map',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const LiveMapScreen()),
-                    );
-                  },
+                  onTap: () => widget.onNavigationSelected?.call('Live Map'),
                 ),
                 _buildNavItem(
                   context,
@@ -261,7 +241,7 @@ class _AdminResponsiveLayoutState extends State<AdminResponsiveLayout> {
                   context,
                   Icons.settings,
                   'Settings',
-                  onTap: () {},
+                  onTap: () => widget.onNavigationSelected?.call('Settings'),
                 ),
               ],
             ),

@@ -81,6 +81,10 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
   Widget build(BuildContext context) {
     final bool isDesktop = MediaQuery.of(context).size.width >= 1024;
 
+    return isDesktop ? _buildDesktopLayout(context) : _buildMobileLayout(context);
+  }
+
+  Widget _buildDesktopLayout(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -106,41 +110,29 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
                 ),
               ],
             ),
-            if (isDesktop)
-              Row(
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.map_outlined),
-                    label: const Text('View on Map'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      _showAddSchoolDialog();
-                    },
-                    icon: const Icon(Icons.add_business),
-                    label: const Text('Add School'),
-                  ),
-                ],
-              ),
+            Row(
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.map_outlined),
+                  label: const Text('View on Map'),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    _showAddSchoolDialog();
+                  },
+                  icon: const Icon(Icons.add_business),
+                  label: const Text('Add School'),
+                ),
+              ],
+            ),
           ],
         ),
         const SizedBox(height: 24),
 
-        // Quick Stats
-        Wrap(
-          spacing: 16,
-          runSpacing: 16,
-          children: [
-            _buildSchoolStat('Total Schools', '42', Icons.school, Colors.blue),
-            _buildSchoolStat('Active Today', '38', Icons.today, Colors.green),
-            _buildSchoolStat('New This Month', '5', Icons.new_releases, Colors.orange),
-            _buildSchoolStat('Total Students', '2,300', Icons.people, Colors.purple),
-            _buildSchoolStat('Total Buses', '52', Icons.directions_bus, Colors.indigo),
-            _buildSchoolStat('Revenue/Month', '\$12,450', Icons.attach_money, Colors.teal),
-          ],
-        ),
+        // Stats Grid
+        _buildStatsGrid(context),
         const SizedBox(height: 24),
 
         // Filters Card
@@ -162,130 +154,295 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
                         ),
                       ),
                     ),
-                    if (isDesktop) ...[
-                      const SizedBox(width: 16),
-                      DropdownButton<String>(
-                        value: _selectedStatus,
-                        items: _statuses.map((status) {
-                          return DropdownMenuItem(
-                            value: status,
-                            child: Text(status.capitalize()),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedStatus = value!;
-                          });
-                        },
-                      ),
-                      const SizedBox(width: 16),
-                      DropdownButton<String>(
-                        value: _selectedSubscription,
-                        items: _subscriptions.map((subscription) {
-                          return DropdownMenuItem(
-                            value: subscription,
-                            child: Text(subscription.capitalize()),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedSubscription = value!;
-                          });
-                        },
-                      ),
-                      const SizedBox(width: 16),
-                      OutlinedButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(Icons.filter_alt),
-                        label: const Text('Advanced'),
-                      ),
-                    ],
+                    const SizedBox(width: 16),
+                    DropdownButton<String>(
+                      value: _selectedStatus,
+                      items: _statuses.map((status) {
+                        return DropdownMenuItem(
+                          value: status,
+                          child: Text(status.capitalize()),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedStatus = value!;
+                        });
+                      },
+                    ),
+                    const SizedBox(width: 16),
+                    DropdownButton<String>(
+                      value: _selectedSubscription,
+                      items: _subscriptions.map((subscription) {
+                        return DropdownMenuItem(
+                          value: subscription,
+                          child: Text(subscription.capitalize()),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedSubscription = value!;
+                        });
+                      },
+                    ),
+                    const SizedBox(width: 16),
+                    OutlinedButton.icon(
+                      onPressed: () {},
+                      icon: const Icon(Icons.filter_alt),
+                      label: const Text('Advanced'),
+                    ),
                   ],
                 ),
-                if (!isDesktop) ...[
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          value: _selectedStatus,
-                          decoration: const InputDecoration(
-                            labelText: 'Status',
-                            border: OutlineInputBorder(),
-                          ),
-                          items: _statuses.map((status) {
-                            return DropdownMenuItem(
-                              value: status,
-                              child: Text(status.capitalize()),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedStatus = value!;
-                            });
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          value: _selectedSubscription,
-                          decoration: const InputDecoration(
-                            labelText: 'Subscription',
-                            border: OutlineInputBorder(),
-                          ),
-                          items: _subscriptions.map((subscription) {
-                            return DropdownMenuItem(
-                              value: subscription,
-                              child: Text(subscription.capitalize()),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedSubscription = value!;
-                            });
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      _showAddSchoolDialog();
-                    },
-                    icon: const Icon(Icons.add_business),
-                    label: const Text('Add School'),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 48),
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
         ),
         const SizedBox(height: 24),
 
-        // Schools Table/List
+        // Schools Table
         Expanded(
-          child: isDesktop
-              ? _buildDesktopTable()
-              : _buildMobileList(),
+          child: _buildDesktopTable(),
         ),
       ],
     );
   }
 
-  Widget _buildSchoolStat(String title, String value, IconData icon, Color color) {
+  Widget _buildMobileLayout(BuildContext context) {
+    final bool isTablet = MediaQuery.of(context).size.width >= 768;
+
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Schools Management',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Manage all registered schools and institutions',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // Stats Grid
+            _buildStatsGrid(context),
+            const SizedBox(height: 20),
+
+            // Filters Card
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    TextField(
+                      decoration: InputDecoration(
+                        hintText: 'Search schools...',
+                        prefixIcon: const Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: _selectedStatus,
+                            decoration: const InputDecoration(
+                              labelText: 'Status',
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                            ),
+                            items: _statuses.map((status) {
+                              return DropdownMenuItem(
+                                value: status,
+                                child: Text(status.capitalize()),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedStatus = value!;
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: _selectedSubscription,
+                            decoration: const InputDecoration(
+                              labelText: 'Subscription',
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                            ),
+                            items: _subscriptions.map((subscription) {
+                              return DropdownMenuItem(
+                                value: subscription,
+                                child: Text(subscription.capitalize()),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedSubscription = value!;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {},
+                            icon: const Icon(Icons.map_outlined),
+                            label: const Text('View Map'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              _showAddSchoolDialog();
+                            },
+                            icon: const Icon(Icons.add_business),
+                            label: const Text('Add School'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Schools List Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Schools (${_schools.length})',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {},
+                  child: const Text('View All'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Schools List
+            ..._schools.map((school) {
+              return Card(
+                margin: const EdgeInsets.only(bottom: 12),
+                child: _buildMobileSchoolItem(school, context),
+              );
+            }).toList(),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatsGrid(BuildContext context) {
+    final bool isDesktop = MediaQuery.of(context).size.width >= 1024;
+    final bool isTablet = MediaQuery.of(context).size.width >= 768;
+
+    final List<Map<String, dynamic>> _stats = [
+      {
+        'title': 'Total Schools',
+        'value': '42',
+        'icon': Icons.school,
+        'color': Colors.deepPurpleAccent.shade100,
+      },
+      {
+        'title': 'Active Today',
+        'value': '38',
+        'icon': Icons.today,
+        'color': Colors.teal,
+      },
+      {
+        'title': 'New This Month',
+        'value': '5',
+        'icon': Icons.new_releases,
+        'color': Colors.orange.shade200,
+      },
+      {
+        'title': 'Total Students',
+        'value': '2,300',
+        'icon': Icons.people,
+        'color': Colors.purpleAccent,
+      },
+      {
+        'title': 'Total Buses',
+        'value': '52',
+        'icon': Icons.directions_bus,
+        'color': Colors.indigo.shade200,
+      },
+      {
+        'title': 'Revenue/Month',
+        'value': '\$12,450',
+        'icon': Icons.attach_money,
+        'color': Colors.cyan,
+      },
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: isDesktop ? 6 : (isTablet ? 3 : 2),
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: isDesktop ? 1.5 : 1.1,
+      ),
+      itemCount: _stats.length,
+      itemBuilder: (context, index) {
+        final stat = _stats[index];
+        return _buildSchoolStatCard(
+          stat['title'] as String,
+          stat['value'] as String,
+          stat['icon'] as IconData,
+          stat['color'] as Color,
+        );
+      },
+    );
+  }
+
+  Widget _buildSchoolStatCard(
+      String title,
+      String value,
+      IconData icon,
+      Color color,
+      ) {
     return Card(
-      child: Container(
-        width: 180,
+      child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
                   padding: const EdgeInsets.all(8),
@@ -295,7 +452,6 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
                   ),
                   child: Icon(icon, color: color, size: 20),
                 ),
-                const Spacer(),
                 IconButton(
                   icon: const Icon(Icons.more_vert, size: 18),
                   onPressed: () {},
@@ -327,302 +483,308 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
 
   Widget _buildDesktopTable() {
     return Card(
-      child: SingleChildScrollView(
-        child: DataTable(
-          columns: const [
-            DataColumn(label: Text('School')),
-            DataColumn(label: Text('Contact')),
-            DataColumn(label: Text('Stats')),
-            DataColumn(label: Text('Status')),
-            DataColumn(label: Text('Subscription')),
-            DataColumn(label: Text('Created')),
-            DataColumn(label: Text('Actions')),
-          ],
-          rows: _schools.map((school) {
-            return DataRow(
-              cells: [
-                DataCell(
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: CircleAvatar(
-                      backgroundColor: Colors.blue.withOpacity(0.1),
-                      child: const Icon(Icons.school, size: 20, color: Colors.blue),
-                    ),
-                    title: Text(school['name']),
-                    subtitle: Text(school['address']),
-                  ),
-                ),
-                DataCell(
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(school['email']),
-                      Text(school['phone']),
-                    ],
-                  ),
-                ),
-                DataCell(
-                  Row(
-                    children: [
-                      Column(
-                        children: [
-                          Text(
-                            school['students'].toString(),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const Text(
-                            'Students',
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(width: 16),
-                      Column(
-                        children: [
-                          Text(
-                            school['buses'].toString(),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const Text(
-                            'Buses',
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                DataCell(
-                  Chip(
-                    label: Text(school['status'].toString().capitalize()),
-                    backgroundColor: _getStatusColor(school['status']).withOpacity(0.1),
-                    labelStyle: TextStyle(
-                      color: _getStatusColor(school['status']),
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-                DataCell(
-                  Chip(
-                    label: Text(school['subscription']),
-                    backgroundColor: _getSubscriptionColor(school['subscription']).withOpacity(0.1),
-                    labelStyle: TextStyle(
-                      color: _getSubscriptionColor(school['subscription']),
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-                DataCell(Text(school['created'])),
-                DataCell(
-                  PopupMenuButton(
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'view',
-                        child: ListTile(
-                          leading: Icon(Icons.remove_red_eye),
-                          title: Text('View Details'),
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'edit',
-                        child: ListTile(
-                          leading: Icon(Icons.edit),
-                          title: Text('Edit School'),
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'subscription',
-                        child: ListTile(
-                          leading: Icon(Icons.subscriptions),
-                          title: Text('Manage Subscription'),
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'users',
-                        child: ListTile(
-                          leading: Icon(Icons.people),
-                          title: Text('Manage Users'),
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'buses',
-                        child: ListTile(
-                          leading: Icon(Icons.directions_bus),
-                          title: Text('Manage Buses'),
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: ListTile(
-                          leading: Icon(Icons.delete, color: Colors.red),
-                          title: Text('Delete', style: TextStyle(color: Colors.red)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+      child: Padding(
+        padding: const EdgeInsets.all(1),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            width: MediaQuery.of(context).size.width - 48,
+            child: DataTable(
+              dataRowHeight: 70,
+              columnSpacing: 20,
+              columns: const [
+                DataColumn(label: Text('School')),
+                DataColumn(label: Text('Contact')),
+                DataColumn(label: Text('Stats')),
+                DataColumn(label: Text('Status')),
+                DataColumn(label: Text('Subscription')),
+                DataColumn(label: Text('Created')),
+                DataColumn(label: Text('Actions')),
               ],
-            );
-          }).toList(),
+              rows: _schools.map((school) {
+                return DataRow(
+                  cells: [
+                    DataCell(
+                      SizedBox(
+                        width: 200,
+                        child: ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: CircleAvatar(
+                            backgroundColor: Colors.blue.withOpacity(0.1),
+                            child: const Icon(Icons.school, size: 20, color: Colors.blue),
+                          ),
+                          title: Text(school['name'], overflow: TextOverflow.ellipsis),
+                          subtitle: Text(school['address'], overflow: TextOverflow.ellipsis),
+                        ),
+                      ),
+                    ),
+                    DataCell(
+                      SizedBox(
+                        width: 180,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(school['email'], overflow: TextOverflow.ellipsis),
+                            Text(school['phone'], overflow: TextOverflow.ellipsis),
+                          ],
+                        ),
+                      ),
+                    ),
+                    DataCell(
+                      Row(
+                        children: [
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                school['students'].toString(),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const Text(
+                                'Students',
+                                style: TextStyle(fontSize: 12, color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(width: 16),
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                school['buses'].toString(),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const Text(
+                                'Buses',
+                                style: TextStyle(fontSize: 12, color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    DataCell(
+                      Chip(
+                        label: Text(school['status'].toString().capitalize()),
+                        backgroundColor: _getStatusColor(school['status']).withOpacity(0.1),
+                        labelStyle: TextStyle(
+                          color: _getStatusColor(school['status']),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    DataCell(
+                      Chip(
+                        label: Text(school['subscription']),
+                        backgroundColor: _getSubscriptionColor(school['subscription']).withOpacity(0.1),
+                        labelStyle: TextStyle(
+                          color: _getSubscriptionColor(school['subscription']),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    DataCell(Text(school['created'])),
+                    DataCell(
+                      PopupMenuButton(
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                            value: 'view',
+                            child: ListTile(
+                              leading: Icon(Icons.remove_red_eye),
+                              title: Text('View Details'),
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'edit',
+                            child: ListTile(
+                              leading: Icon(Icons.edit),
+                              title: Text('Edit School'),
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'subscription',
+                            child: ListTile(
+                              leading: Icon(Icons.subscriptions),
+                              title: Text('Manage Subscription'),
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'users',
+                            child: ListTile(
+                              leading: Icon(Icons.people),
+                              title: Text('Manage Users'),
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'buses',
+                            child: ListTile(
+                              leading: Icon(Icons.directions_bus),
+                              title: Text('Manage Buses'),
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: ListTile(
+                              leading: Icon(Icons.delete, color: Colors.red),
+                              title: Text('Delete', style: TextStyle(color: Colors.red)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildMobileList() {
-    return ListView.builder(
-      itemCount: _schools.length,
-      itemBuilder: (context, index) {
-        final school = _schools[index];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+  Widget _buildMobileSchoolItem(Map<String, dynamic> school, BuildContext context) {
+    final bool isTablet = MediaQuery.of(context).size.width >= 768;
+
+    return Padding(
+      padding: EdgeInsets.all(isTablet ? 16 : 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: Colors.blue.withOpacity(0.1),
+                child: const Icon(Icons.school, size: 20, color: Colors.blue),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CircleAvatar(
-                      backgroundColor: Colors.blue.withOpacity(0.1),
-                      child: const Icon(Icons.school, size: 20, color: Colors.blue),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            school['name'],
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            school['address'],
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+                    Text(
+                      school['name'],
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: isTablet ? 16 : 14,
                       ),
                     ),
-                    Chip(
-                      label: Text(school['status'].toString().capitalize()),
-                      backgroundColor: _getStatusColor(school['status']).withOpacity(0.1),
-                      labelStyle: TextStyle(
-                        color: _getStatusColor(school['status']),
-                        fontSize: 12,
+                    Text(
+                      school['address'],
+                      style: TextStyle(
+                        fontSize: isTablet ? 13 : 11,
+                        color: Colors.grey,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Contact',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          Text(
-                            school['email'],
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                          Text(
-                            school['phone'],
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Column(
-                      children: [
-                        Row(
-                          children: [
-                            _buildMobileStat('Students', school['students'].toString()),
-                            const SizedBox(width: 16),
-                            _buildMobileStat('Buses', school['buses'].toString()),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Chip(
-                          label: Text(school['subscription']),
-                          backgroundColor: _getSubscriptionColor(school['subscription']).withOpacity(0.1),
-                          labelStyle: TextStyle(
-                            color: _getSubscriptionColor(school['subscription']),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+              ),
+              Chip(
+                label: Text(
+                  school['status'].toString().capitalize(),
+                  style: TextStyle(fontSize: isTablet ? 12 : 10),
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(Icons.remove_red_eye, size: 16),
-                        label: const Text('View'),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(Icons.edit, size: 16),
-                        label: const Text('Edit'),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(Icons.more_vert),
-                      onPressed: () {},
-                    ),
-                  ],
+                backgroundColor: _getStatusColor(school['status']).withOpacity(0.1),
+                labelStyle: TextStyle(
+                  color: _getStatusColor(school['status']),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        );
-      },
+          const SizedBox(height: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Contact',
+                style: TextStyle(
+                  fontSize: isTablet ? 14 : 12,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                school['email'],
+                style: TextStyle(fontSize: isTablet ? 14 : 12),
+              ),
+              Text(
+                school['phone'],
+                style: TextStyle(fontSize: isTablet ? 14 : 12),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _buildMobileStat('Students', school['students'].toString(), isTablet),
+              const SizedBox(width: 16),
+              _buildMobileStat('Buses', school['buses'].toString(), isTablet),
+              const Spacer(),
+              Chip(
+                label: Text(
+                  school['subscription'],
+                  style: TextStyle(fontSize: isTablet ? 12 : 10),
+                ),
+                backgroundColor: _getSubscriptionColor(school['subscription']).withOpacity(0.1),
+                labelStyle: TextStyle(
+                  color: _getSubscriptionColor(school['subscription']),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {},
+                  icon: Icon(Icons.remove_red_eye, size: isTablet ? 16 : 14),
+                  label: Text('View', style: TextStyle(fontSize: isTablet ? 14 : 12)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {},
+                  icon: Icon(Icons.edit, size: isTablet ? 16 : 14),
+                  label: Text('Edit', style: TextStyle(fontSize: isTablet ? 14 : 12)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: Icon(Icons.more_vert, size: isTablet ? 20 : 18),
+                onPressed: () {},
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildMobileStat(String label, String value) {
+  Widget _buildMobileStat(String label, String value, bool isTablet) {
     return Column(
       children: [
         Text(
           value,
-          style: const TextStyle(
-            fontSize: 16,
+          style: TextStyle(
+            fontSize: isTablet ? 16 : 14,
             fontWeight: FontWeight.bold,
           ),
         ),
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 12,
+          style: TextStyle(
+            fontSize: isTablet ? 12 : 10,
             color: Colors.grey,
           ),
         ),
@@ -760,13 +922,13 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
   Color _getStatusColor(String status) {
     switch (status) {
       case 'active':
-        return Colors.green;
+        return Colors.teal;
       case 'expiring':
-        return Colors.orange;
+        return Colors.orange.shade200;
       case 'trial':
-        return Colors.blue;
+        return Colors.deepPurpleAccent.shade100;
       case 'inactive':
-        return Colors.red;
+        return Colors.pinkAccent;
       default:
         return Colors.grey;
     }
@@ -775,13 +937,13 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
   Color _getSubscriptionColor(String subscription) {
     switch (subscription) {
       case 'Premium':
-        return Colors.purple;
+        return Colors.purpleAccent;
       case 'Enterprise':
-        return Colors.blue;
+        return Colors.deepPurpleAccent.shade100;
       case 'Basic':
-        return Colors.green;
+        return Colors.teal;
       case 'Trial':
-        return Colors.orange;
+        return Colors.orange.shade200;
       default:
         return Colors.grey;
     }

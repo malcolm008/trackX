@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:bustracker_007/core/services/api_service.dart';
+import 'package:bustracker_007/data/models/web/subscription/subscription_model.dart';
+import 'package:bustracker_007/data/models/web/subscription/billing_plan_model.dart';
+import '../widgets/billing_dialog.dart';
 
 class SubscriptionsScreen extends StatefulWidget {
   const SubscriptionsScreen({super.key});
@@ -8,76 +13,403 @@ class SubscriptionsScreen extends StatefulWidget {
 }
 
 class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
-  final List<Map<String, dynamic>> _subscriptions = [
-    {
-      'id': 'SUB-001',
-      'school': 'Greenwood High',
-      'plan': 'Premium',
-      'amount': '\$499',
-      'period': 'Monthly',
-      'status': 'active',
-      'startDate': '2024-01-01',
-      'endDate': '2024-01-31',
-      'autoRenew': true,
-      'students': 500,
-      'buses': 10,
-    },
-    {
-      'id': 'SUB-002',
-      'school': 'Sunrise Academy',
-      'plan': 'Basic',
-      'amount': '\$199',
-      'period': 'Monthly',
-      'status': 'active',
-      'startDate': '2024-01-05',
-      'endDate': '2024-02-05',
-      'autoRenew': true,
-      'students': 200,
-      'buses': 5,
-    },
-    {
-      'id': 'SUB-003',
-      'school': 'Central School',
-      'plan': 'Premium',
-      'amount': '\$499',
-      'period': 'Monthly',
-      'status': 'expiring',
-      'startDate': '2023-12-01',
-      'endDate': '2024-01-31',
-      'autoRenew': false,
-      'students': 450,
-      'buses': 8,
-    },
-    {
-      'id': 'SUB-004',
-      'school': 'Northwood School',
-      'plan': 'Enterprise',
-      'amount': '\$999',
-      'period': 'Monthly',
-      'status': 'active',
-      'startDate': '2024-01-15',
-      'endDate': '2024-02-15',
-      'autoRenew': true,
-      'students': 1000,
-      'buses': 25,
-    },
-    {
-      'id': 'SUB-005',
-      'school': 'Valley Prep',
-      'plan': 'Basic',
-      'amount': '\$199',
-      'period': 'Monthly',
-      'status': 'trial',
-      'startDate': '2024-01-20',
-      'endDate': '2024-02-20',
-      'autoRenew': false,
-      'students': 150,
-      'buses': 4,
-    },
-  ];
+  List<Subscription> _subscriptions = [];
+  List<Subscription> _filteredSubscriptions = [];
+  SubscriptionStats? _stats;
+  List<BillingPlan> _billingPlans = [];
 
+
+  String _selectedPlan = 'all';
   String _selectedFilter = 'all';
   final List<String> _filters = ['all', 'active', 'expiring', 'trial', 'cancelled'];
+
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounce;
+  final ApiService _apiService = ApiService();
+  bool _isLoading = true;
+  String _error = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _searchController.dispose();
+    _apiService.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    if (_searchDebounce?.isActive ?? false) {
+      _searchDebounce?.cancel();
+    }
+
+    _searchDebounce = Timer(const Duration(milliseconds: 500), () {
+      _applyFilters();
+    });
+  }
+
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+      _error = '';
+    });
+
+    try {
+      final subscriptions = await _apiService.getSubscriptions();
+      final stats = await _apiService.getSubscriptionStats();
+      final plans = await _apiService.getBillingPlans();
+
+      setState(() {
+        _subscriptions = subscriptions;
+        _stats = stats;
+        _billingPlans = plans;
+        _applyFilters();
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+      _loadMockData();
+    }
+  }
+
+  void _loadMockData() {
+    // Fallback mock data
+    setState(() {
+      _subscriptions = [
+        Subscription(
+          id: 'SUB-001',
+          schoolId: 'SCH-001',
+          schoolName: 'Greenwood High',
+          plan: 'Premium',
+          amount: 499.00,
+          period: 'Monthly',
+          status: 'active',
+          startDate: DateTime(2024, 1, 1),
+          endDate: DateTime(2024, 1, 31),
+          autoRenew: true,
+          students: 500,
+          buses: 10,
+        ),
+        // ... other mock subscriptions
+      ];
+
+      _stats = SubscriptionStats(
+        totalRevenue: 12450.00,
+        activeSubscriptions: 42,
+        trialSubscriptions: 8,
+        renewalRate: 94.0,
+        expiringSoon: 2,
+        cancelledThisMonth: 1,
+      );
+
+      _applyFilters();
+    });
+  }
+
+  void _applyFilters() {
+    List<Subscription> filtered = List.from(_subscriptions);
+
+    // Apply search filter
+    if (_searchController.text.isNotEmpty) {
+      final searchTerm = _searchController.text.toLowerCase();
+      filtered = filtered.where((subscription) {
+        return subscription.schoolName.toLowerCase().contains(searchTerm) ||
+            subscription.id.toLowerCase().contains(searchTerm) ||
+            subscription.schoolId.toLowerCase().contains(searchTerm);
+      }).toList();
+    }
+
+    // Apply status filter
+    if (_selectedFilter != 'all') {
+      filtered = filtered.where((subscription) {
+        return subscription.status.toLowerCase() == _selectedFilter.toLowerCase();
+      }).toList();
+    }
+
+    // Apply plan filter
+    if (_selectedPlan != 'all') {
+      filtered = filtered.where((subscription) {
+        return subscription.plan.toLowerCase() == _selectedPlan.toLowerCase();
+      }).toList();
+    }
+
+    setState(() {
+      _filteredSubscriptions = filtered;
+    });
+  }
+
+  void _handleFilterChange(String? value) {
+    if (value != null) {
+      setState(() {
+        _selectedFilter = value;
+      });
+      _applyFilters();
+    }
+  }
+
+  void _handlePlanChange(String? value) {
+    if (value != null) {
+      setState(() {
+        _selectedPlan = value;
+      });
+      _applyFilters();
+    }
+  }
+
+  void _resetFilters() {
+    setState(() {
+      _searchController.clear();
+      _selectedFilter = 'all';
+      _selectedPlan = 'all';
+    });
+    _applyFilters();
+  }
+
+  void _showAddSubscriptionDialog() {
+    // You'll need to implement this based on your school selection
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Subscription'),
+        content: const Text('Select a school to add subscription'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          // Implement school selection and plan assignment
+        ],
+      ),
+    );
+  }
+
+  void _showBillingPlansDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: BillingPlansDialog(
+            apiService: _apiService,
+            onPlanAdded: () => _loadData(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _updateAutoRenew(Subscription subscription, bool value) async {
+    try {
+      final success = await _apiService.updateSubscriptionAutoRenew(subscription.id, value,);
+
+      if (success) {
+        setState(() {
+          final index = _subscriptions.indexWhere((s) => s.id == subscription.id);
+          if (index != -1) {
+            _subscriptions[index] = subscription.copyWith(autoRenew: value);
+            _applyFilters();
+          }
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Auto-renew ${value? 'enabled' : 'disabled'}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update auto-renew: $e'),
+          backgroundColor: Colors.red,
+        )
+      );
+    }
+  }
+
+  Future<void> _cancelSubscription(Subscription subscription) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Subscription'),
+        content: Text('Are you sure you want to cancel subscription for ${subscription.schoolName}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Yes, Cancel'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final success = await _apiService.cancelSubscription(subscription.id);
+
+        if (success) {
+          setState(() {
+            final index = _subscriptions.indexWhere((s) => s.id == subscription.id);
+            if (index != -1) {
+              _subscriptions[index] = subscription.copyWith(
+                status: 'cancelled',
+                autoRenew: false,
+              );
+              _applyFilters();
+            }
+          });
+
+          // Refresh stats
+          _loadData();
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Subscription cancelled successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to cancel subscription: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _renewSubscription(Subscription subscription) async {
+    final months = await showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Renew Subscription'),
+        content: const Text('Select renewal period:'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, 1),
+            child: const Text('1 Month'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, 3),
+            child: const Text('3 Months'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, 6),
+            child: const Text('6 Months'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, 12),
+            child: const Text('1 Year'),
+          ),
+        ],
+      ),
+    );
+
+    if (months != null) {
+      try {
+        final success = await _apiService.renewSubscription(subscription.id, months);
+
+        if (success) {
+          setState(() {
+            final index = _subscriptions.indexWhere((s) => s.id == subscription.id);
+            if (index != -1) {
+              final newEndDate = subscription.endDate.add(Duration(days: 30 * months));
+              _subscriptions[index] = subscription.copyWith(
+                endDate: newEndDate,
+                status: 'active',
+              );
+              _applyFilters();
+            }
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Subscription renewed for $months months'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to renew subscription: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _changeSubscriptionPlan(Subscription subscription) async {
+    final newPlan = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Change Plan'),
+        content: const Text('Select new plan:'),
+        actions: _billingPlans.map((plan) {
+          return TextButton(
+            onPressed: () => Navigator.pop(context, plan.name),
+            child: Text(plan.name),
+          );
+        }).toList(),
+      ),
+    );
+
+    if (newPlan != null && newPlan != subscription.plan) {
+      try {
+        final success = await _apiService.changeSubscriptionPlan(subscription.id, newPlan);
+
+        if (success) {
+          setState(() {
+            final index = _subscriptions.indexWhere((s) => s.id == subscription.id);
+            if (index != -1) {
+              // Find new plan amount
+              final newPlanAmount = _billingPlans
+                  .firstWhere((plan) => plan.name == newPlan)
+                  .price;
+
+              _subscriptions[index] = subscription.copyWith(
+                plan: newPlan,
+                amount: newPlanAmount,
+              );
+              _applyFilters();
+            }
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Plan changed to $newPlan'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to change plan: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -372,7 +704,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
               rows: _subscriptions.map((subscription) {
                 return DataRow(
                   cells: [
-                    DataCell(Text(subscription['id'])),
+                    DataCell(Text(subscription.id)),
                     DataCell(
                       SizedBox(
                         width: 200,
@@ -383,40 +715,40 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                             child: const Icon(Icons.school, size: 16),
                           ),
                           title: Text(
-                            subscription['school'],
+                            subscription.schoolName,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          subtitle: Text('Expires: ${subscription['endDate']}'),
+                          subtitle: Text('Expires: ${subscription.endDate}'),
                         ),
                       ),
                     ),
                     DataCell(
                       Chip(
-                        label: Text(subscription['plan']),
+                        label: Text(subscription.plan),
                         backgroundColor:
-                        _getPlanColor(subscription['plan']).withOpacity(0.1),
+                        _getPlanColor(subscription.plan).withOpacity(0.1),
                         labelStyle: TextStyle(
-                          color: _getPlanColor(subscription['plan']),
+                          color: _getPlanColor(subscription.plan),
                         ),
                       ),
                     ),
-                    DataCell(Text(subscription['amount'])),
+                    DataCell(Text(subscription.status)),
                     DataCell(
                       Chip(
-                        label: Text(subscription['status'].toString().capitalize()),
+                        label: Text(subscription.status.toString().capitalize()),
                         backgroundColor:
-                        _getStatusColor(subscription['status']).withOpacity(0.1),
+                        _getStatusColor(subscription.status).withOpacity(0.1),
                         labelStyle: TextStyle(
-                          color: _getStatusColor(subscription['status']),
+                          color: _getStatusColor(subscription.status),
                           fontSize: 12,
                         ),
                       ),
                     ),
-                    DataCell(Text(subscription['students'].toString())),
-                    DataCell(Text(subscription['buses'].toString())),
+                    DataCell(Text(subscription.students.toString())),
+                    DataCell(Text(subscription.buses.toString())),
                     DataCell(
                       Switch(
-                        value: subscription['autoRenew'],
+                        value: subscription.autoRenew,
                         onChanged: (value) {},
                       ),
                     ),
@@ -482,17 +814,17 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      subscription['id'],
+                      subscription.id,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     Chip(
-                      label: Text(subscription['status'].toString().capitalize()),
+                      label: Text(subscription.status.toString().capitalize()),
                       backgroundColor:
-                      _getStatusColor(subscription['status']).withOpacity(0.1),
+                      _getStatusColor(subscription.status).withOpacity(0.1),
                       labelStyle: TextStyle(
-                        color: _getStatusColor(subscription['status']),
+                        color: _getStatusColor(subscription.status),
                         fontSize: 12,
                       ),
                     ),
@@ -505,15 +837,15 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                     backgroundColor: Colors.blue.withOpacity(0.1),
                     child: const Icon(Icons.school, size: 20),
                   ),
-                  title: Text(subscription['school']),
-                  subtitle: Text('Plan: ${subscription['plan']} • ${subscription['amount']}'),
+                  title: Text(subscription.schoolName),
+                  subtitle: Text('Plan: ${subscription.plan} • ${subscription.amount}'),
                 ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    _buildMobileStat('Students', subscription['students'].toString()),
+                    _buildMobileStat('Students', subscription.students.toString()),
                     const SizedBox(width: 16),
-                    _buildMobileStat('Buses', subscription['buses'].toString()),
+                    _buildMobileStat('Buses', subscription.buses.toString()),
                     const Spacer(),
                     Column(
                       children: [
@@ -525,7 +857,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                           ),
                         ),
                         Switch(
-                          value: subscription['autoRenew'],
+                          value: subscription.autoRenew,
                           onChanged: (value) {},
                         ),
                       ],
@@ -613,6 +945,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
 
 extension StringExtension on String {
   String capitalize() {
+    if (isEmpty) return this;
     return "${this[0].toUpperCase()}${substring(1)}";
   }
 }

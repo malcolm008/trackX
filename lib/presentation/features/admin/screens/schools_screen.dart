@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:bustracker_007/core/utils/string_extensions.dart';
 import 'package:bustracker_007/data/models/web/school/school_model.dart';
@@ -15,11 +17,15 @@ class SchoolsScreen extends StatefulWidget {
 class _SchoolsScreenState extends State<SchoolsScreen> {
   List<School> _schools = [];
   SchoolStats? _stats;
+  List<School> _filteredSchools = [];
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounce;
 
   String _selectedStatus = 'all';
   String _selectedSubscription = 'all';
   final List<String> _statuses = ['all', 'active', 'expiring', 'trial', 'inactive'];
   final List<String> _subscriptions = ['all', 'premium', 'basic', 'enterprise', 'trial'];
+
 
   final ApiService _apiService = ApiService();
   bool _isLoading = true;
@@ -29,11 +35,24 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
   void initState() {
     super.initState();
     _loadData();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  void _onSearchChanged() {
+    if (_searchDebounce?.isActive ?? false) {
+      _searchDebounce?.cancel();
+    }
+
+    _searchDebounce = Timer(const Duration(milliseconds: 500), () {
+      _applyFilters();
+    });
   }
 
   @override
   void dispose() {
     _apiService.dispose();
+    _searchController.dispose();
+    _searchDebounce?.cancel();
     super.dispose();
   }
 
@@ -54,6 +73,7 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
       setState(() {
         _schools = schools;
         _stats = stats;
+        _applyFilters();
         _isLoading = false;
       });
     } catch (e) {
@@ -66,6 +86,38 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
         _loadMockData();
       }
     }
+  }
+
+  void _applyFilters() {
+    List<School> filtered = List.from(_schools);
+
+    if (_searchController.text.isNotEmpty) {
+      final searchTerm = _searchController.text.toLowerCase();
+      filtered = filtered.where((school) {
+        return school.name.toLowerCase().contains(searchTerm) ||
+            school.email.toLowerCase().contains(searchTerm) ||
+            school.address.toLowerCase().contains(searchTerm) ||
+            school.schoolId.toLowerCase().contains(searchTerm) ||
+            school.phone.toLowerCase().contains(searchTerm);
+      }).toList();
+    }
+
+    if (_selectedStatus != 'all') {
+      filtered = filtered.where((school) {
+        return school.status.toLowerCase() == _selectedStatus.toLowerCase();
+      }).toList();
+    }
+
+    // Apply subscription filter
+    if (_selectedSubscription != 'all') {
+      filtered = filtered.where((school) {
+        return school.subscription.toLowerCase() == _selectedSubscription.toLowerCase();
+      }).toList();
+    }
+
+    setState(() {
+      _filteredSchools = filtered;
+    });
   }
 
   void _loadMockData() {
@@ -193,6 +245,7 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
         ],
 
         // Filters Card
+        // Filters Card
         Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -202,53 +255,189 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
                   children: [
                     Expanded(
                       child: TextField(
+                        controller: _searchController,
                         decoration: InputDecoration(
                           hintText: 'Search schools by name, location, or ID...',
                           prefixIcon: const Icon(Icons.search),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              _applyFilters();
+                            },
+                          )
+                              : null,
                         ),
+                        onChanged: (value) {
+                          // Triggered by the controller listener
+                        },
                       ),
                     ),
                     const SizedBox(width: 16),
-                    DropdownButton<String>(
-                      value: _selectedStatus,
-                      items: _statuses.map((status) {
-                        return DropdownMenuItem(
-                          value: status,
-                          child: Text(status.capitalize()),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedStatus = value!;
-                        });
-                      },
+                    // Status filter
+                    Container(
+                      width: 150,
+                      child: DropdownButtonFormField<String>(
+                        value: _selectedStatus,
+                        decoration: InputDecoration(
+                          labelText: 'Status',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                        ),
+                        items: _statuses.map((status) {
+                          return DropdownMenuItem(
+                            value: status,
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 10,
+                                  height: 10,
+                                  decoration: BoxDecoration(
+                                    color: _getStatusColor(status),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(status.capitalize()),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: _handleStatusChange,
+                      ),
                     ),
                     const SizedBox(width: 16),
-                    DropdownButton<String>(
-                      value: _selectedSubscription,
-                      items: _subscriptions.map((subscription) {
-                        return DropdownMenuItem(
-                          value: subscription,
-                          child: Text(subscription.capitalize()),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedSubscription = value!;
-                        });
-                      },
+                    // Subscription filter
+                    Container(
+                      width: 150,
+                      child: DropdownButtonFormField<String>(
+                        value: _selectedSubscription,
+                        decoration: InputDecoration(
+                          labelText: 'Subscription',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                        ),
+                        items: _subscriptions.map((subscription) {
+                          return DropdownMenuItem(
+                            value: subscription,
+                            child: Text(subscription),
+                          );
+                        }).toList(),
+                        onChanged: _handleSubscriptionChange,
+                      ),
                     ),
                     const SizedBox(width: 16),
+                    // Filter actions
                     OutlinedButton.icon(
-                      onPressed: () {},
+                      onPressed: () {
+                        _showAdvancedFiltersDialog();
+                      },
                       icon: const Icon(Icons.filter_alt),
                       label: const Text('Advanced'),
                     ),
+                    const SizedBox(width: 8),
+                    // Reset filters button
+                    if (_searchController.text.isNotEmpty ||
+                        _selectedStatus != 'all' ||
+                        _selectedSubscription != 'all')
+                      TextButton.icon(
+                        onPressed: () {
+                          _resetFilters();
+                        },
+                        icon: const Icon(Icons.refresh, size: 16),
+                        label: const Text('Reset'),
+                      ),
                   ],
                 ),
+                // Filter summary
+                if (_filteredSchools.length != _schools.length) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Chip(
+                        label: Text('${_filteredSchools.length} of ${_schools.length} schools'),
+                        backgroundColor: Colors.blue.shade50,
+                      ),
+                      const SizedBox(width: 8),
+                      if (_searchController.text.isNotEmpty)
+                        Chip(
+                          label: Row(
+                            children: [
+                              const Text('Search: '),
+                              Text(
+                                _searchController.text,
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.clear, size: 14),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  _applyFilters();
+                                },
+                                padding: EdgeInsets.zero,
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ],
+                          ),
+                          backgroundColor: Colors.grey.shade100,
+                          onDeleted: () {
+                            _searchController.clear();
+                            _applyFilters();
+                          },
+                        ),
+                      if (_selectedStatus != 'all')
+                        Chip(
+                          label: Row(
+                            children: [
+                              const Text('Status: '),
+                              Text(_selectedStatus.capitalize()),
+                              IconButton(
+                                icon: const Icon(Icons.clear, size: 14),
+                                onPressed: () {
+                                  setState(() {
+                                    _selectedStatus = 'all';
+                                  });
+                                  _applyFilters();
+                                },
+                                padding: EdgeInsets.zero,
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ],
+                          ),
+                          backgroundColor: Colors.grey.shade100,
+                        ),
+                      if (_selectedSubscription != 'all')
+                        Chip(
+                          label: Row(
+                            children: [
+                              const Text('Plan: '),
+                              Text(_selectedSubscription),
+                              IconButton(
+                                icon: const Icon(Icons.clear, size: 14),
+                                onPressed: () {
+                                  setState(() {
+                                    _selectedSubscription = 'all';
+                                  });
+                                  _applyFilters();
+                                },
+                                padding: EdgeInsets.zero,
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ],
+                          ),
+                          backgroundColor: Colors.grey.shade100,
+                        ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -559,7 +748,52 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
                   DataColumn(label: Text('Created')),
                   DataColumn(label: Text('Actions')),
                 ],
-                rows: _schools.map((school) {
+                rows: _filteredSchools.isEmpty && !_isLoading
+                  ? [
+                    DataRow(
+                      cells: [
+                        DataCell(
+                          SizedBox(
+                            width: MediaQuery.of(context).size.width - 48,
+                            child: const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(32.0),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.search_off, size: 48, color: Colors.grey),
+                                    SizedBox(height: 16),
+                                    Text(
+                                      'No schools found',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                    SizedBox(height: 8),
+                                    Text(
+                                      'Try changing youe search or filters',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const DataCell(SizedBox()),
+                        const DataCell(SizedBox()),
+                        const DataCell(SizedBox()),
+                        const DataCell(SizedBox()),
+                        const DataCell(SizedBox()),
+                        const DataCell(SizedBox()),
+                      ],
+                    ),
+                ]
+                : _filteredSchools.map((school)  {
                   return DataRow(
                     cells: [
                       DataCell(
@@ -653,19 +887,29 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
                         PopupMenuButton(
                           shadowColor: Colors.green,
                           itemBuilder: (context) => [
-                            const PopupMenuItem(
+                            PopupMenuItem(
                               value: 'view',
                               child: ListTile(
                                 leading: Icon(Icons.remove_red_eye, color: Colors.grey,),
                                 title: Text('View Details', style: TextStyle(color: Colors.grey),),
                               ),
+                              onTap: () {
+                                Future.delayed(Duration.zero, () {
+                                  _showSchoolDetails(school);
+                                });
+                              },
                             ),
-                            const PopupMenuItem(
+                            PopupMenuItem(
                               value: 'edit',
                               child: ListTile(
                                 leading: Icon(Icons.edit, color: Colors.grey,),
                                 title: Text('Edit School', style: TextStyle(color: Colors.grey),),
                               ),
+                              onTap: () {
+                                Future.delayed(Duration.zero, () {
+                                  _showEditSchoolDialog(school);
+                                });
+                              },
                             ),
                             const PopupMenuItem(
                               value: 'subscription',
@@ -1274,6 +1518,206 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  void _showAdvancedFiltersDialog() {
+    int? minStudents;
+    int? maxStudents;
+    int? minBuses;
+    int? maxBuses;
+    DateTimeRange? dateRange;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.filter_alt),
+                SizedBox(width: 8),
+                Text('Advanced Filters'),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Student range
+                  const Text(
+                    'Number of Students',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          decoration: const InputDecoration(
+                            labelText: 'Min',
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.number,
+                          onChanged: (value) {
+                            minStudents = int.tryParse(value);
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: TextFormField(
+                          decoration: const InputDecoration(
+                            labelText: 'Max',
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.number,
+                          onChanged: (value) {
+                            maxStudents = int.tryParse(value);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Buses range
+                  const Text(
+                    'Number of Buses',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          decoration: const InputDecoration(
+                            labelText: 'Min',
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.number,
+                          onChanged: (value) {
+                            minBuses = int.tryParse(value);
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: TextFormField(
+                          decoration: const InputDecoration(
+                            labelText: 'Max',
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.number,
+                          onChanged: (value) {
+                            maxBuses = int.tryParse(value);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Date range
+                  const Text(
+                    'Registration Date',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton(
+                    onPressed: () async {
+                      final DateTimeRange? picked = await showDateRangePicker(
+                        context: context,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now(),
+                        initialDateRange: dateRange,
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          dateRange = picked;
+                        });
+                      }
+                    },
+                    child: Text(
+                      dateRange != null
+                          ? '${_formatDate(dateRange!.start)} - ${_formatDate(dateRange!.end)}'
+                          : 'Select Date Range',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  // Apply advanced filters
+                  _applyAdvancedFilters(
+                    minStudents: minStudents,
+                    maxStudents: maxStudents,
+                    minBuses: minBuses,
+                    maxBuses: maxBuses,
+                    dateRange: dateRange,
+                  );
+                  Navigator.pop(context);
+                },
+                child: const Text('Apply Filters'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _applyAdvancedFilters({
+    int? minStudents,
+    int? maxStudents,
+    int? minBuses,
+    int? maxBuses,
+    DateTimeRange? dateRange,
+  }) {
+    // You can extend the _applyFilters method or create a new one
+    // For simplicity, I'll show how to add this to the existing filter logic
+    // You would need to update _applyFilters to include these parameters
+  }
+
+  void _showEditSchoolDialog(School school) {
+    showDialog(
+      context: context,
+      builder: (context) => EditSchoolDialog(
+        school: school,
+        apiService: _apiService,
+        onSchoolUpdated: (School updatedSchool) {
+          setState(() {
+            final index = _schools.indexWhere((s)=> s.schoolId == updatedSchool.schoolId);
+            if (index != -1) {
+              _schools[index] = updatedSchool;
+            }
+          });
+        },
+        onRefreshData: _loadData,
+      ),
+    );
+  }
+
+  void _resetFilters() {
+    setState(() {
+      _searchController.clear();
+      _selectedStatus = 'all';
+      _selectedSubscription = 'all';
+    });
+    _applyFilters();
+  }
+
+  void _showSchoolDetails(School school) {
+    showDialog(
+      context: context,
+      builder: (context) => SchoolDetailsDialog(school: school),
     );
   }
 

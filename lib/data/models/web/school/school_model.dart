@@ -9,6 +9,13 @@ class School {
   final int buses;
   final String status;
   final String subscription;
+  final String? subscriptionId;
+  final DateTime? subscriptionStartDate;
+  final DateTime? subscriptionEndDate;
+  final bool autoRenew;
+  final String subscriptionStatus;
+  final double subscriptionAmount;
+  final DateTime? subscriptionUpdatedAt;
   final DateTime createdAt;
   final DateTime? updatedAt;
 
@@ -25,6 +32,13 @@ class School {
     required this.subscription,
     required this.createdAt,
     this.updatedAt,
+    this.subscriptionId,
+    this.subscriptionStartDate,
+    this.subscriptionAmount = 0.0,
+    this.autoRenew = true,
+    this.subscriptionEndDate,
+    this.subscriptionStatus = 'active',
+    this.subscriptionUpdatedAt,
 });
 
   factory School.fromJson(Map<String, dynamic> json) {
@@ -41,6 +55,19 @@ class School {
       subscription: json['subscription'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at'] as String) : null,
+      subscriptionId: json['subscription_id'] as String?,
+      subscriptionStartDate: json['subscription_start_date'] != null
+          ? DateTime.parse(json['subscription_start_date'] as String)
+          : null,
+      subscriptionEndDate: json['subscription_end_date'] != null
+          ? DateTime.parse(json['subscription_end_date'] as String)
+          : null,
+      autoRenew: (json['auto_renew'] as int?) == 1,
+      subscriptionStatus: json['subscription_status'] as String? ?? 'active',
+      subscriptionAmount: (json['subscription_amount'] as num?)?.toDouble() ?? 0.0,
+      subscriptionUpdatedAt: json['subscription_updated_at'] != null
+          ? DateTime.parse(json['subscription_updated_at'] as String)
+          : null,
     );
   }
 
@@ -58,6 +85,13 @@ class School {
       'subscription': subscription,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
+      'subscription_id': subscriptionId,
+      'subscription_start_date': subscriptionStartDate?.toIso8601String(),
+      'subscription_end_date': subscriptionEndDate?.toIso8601String(),
+      'auto_renew': autoRenew ? 1 : 0,
+      'subscription_status': subscriptionStatus,
+      'subscription_amount': subscriptionAmount,
+      'subscription_updated_at': subscriptionUpdatedAt?.toIso8601String(),
     };
   }
 
@@ -74,6 +108,13 @@ class School {
     String? subscription,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? subscriptionId,
+    DateTime? subscriptionStartDate,
+    DateTime? subscriptionEndDate,
+    bool? autoRenew,
+    String? subscriptionStatus,
+    double? subscriptionAmount,
+    DateTime? subscriptionUpdatedAt,
 }) {
     return School(
       id: id ?? this.id,
@@ -88,6 +129,13 @@ class School {
       subscription: subscription ?? this.subscription,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      subscriptionId: subscriptionId ?? this.subscriptionId,
+      subscriptionStartDate: subscriptionStartDate ?? this.subscriptionStartDate,
+      subscriptionEndDate: subscriptionEndDate ?? this.subscriptionEndDate,
+      autoRenew: autoRenew ?? this.autoRenew,
+      subscriptionStatus: subscriptionStatus ?? this.subscriptionStatus,
+      subscriptionAmount: subscriptionAmount ?? this.subscriptionAmount,
+      subscriptionUpdatedAt: subscriptionUpdatedAt ?? this.subscriptionUpdatedAt,
     );
   }
 }

@@ -12,25 +12,27 @@ class SchoolDetailsDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 600),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(context),
-              const SizedBox(height: 24),
-              _buildSchoolInfo(context),
-              const SizedBox(height: 24),
-              _buildStatistics(),
-              const SizedBox(height: 24),
-              _buildSubscriptionInfo(),
-              const SizedBox(height: 24),
-              _buildFooter(),
-            ],
+    return SingleChildScrollView(
+      child: Dialog(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(context),
+                const SizedBox(height: 3),
+                _buildSchoolInfo(context),
+                const SizedBox(height: 0),
+                _buildStatistics(),
+                const SizedBox(height: 0),
+                _buildSubscriptionInfo(),
+                const SizedBox(height: 0),
+                _buildFooter(),
+              ],
+            ),
           ),
         ),
       ),
@@ -144,7 +146,7 @@ class SchoolDetailsDialog extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [

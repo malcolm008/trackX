@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:bustracker_007/core/utils/string_extensions.dart';
+import 'package:bustracker_007/data/models/web/school/school_model.dart';
+import 'package:bustracker_007/core/services/api_service.dart';
 
 class SchoolsScreen extends StatefulWidget {
   const SchoolsScreen({super.key});
@@ -9,77 +11,128 @@ class SchoolsScreen extends StatefulWidget {
 }
 
 class _SchoolsScreenState extends State<SchoolsScreen> {
-  final List<Map<String, dynamic>> _schools = [
-    {
-      'id': 'SCH-001',
-      'name': 'Greenwood High',
-      'email': 'contact@greenwood.edu',
-      'phone': '+1 (555) 123-4567',
-      'address': '123 Main St, Greenwood City',
-      'students': 500,
-      'buses': 10,
-      'status': 'active',
-      'subscription': 'Premium',
-      'created': '2023-12-01',
-    },
-    {
-      'id': 'SCH-002',
-      'name': 'Sunrise Academy',
-      'email': 'info@sunrise.edu',
-      'phone': '+1 (555) 234-5678',
-      'address': '456 Oak Ave, Sunrise Town',
-      'students': 200,
-      'buses': 5,
-      'status': 'active',
-      'subscription': 'Basic',
-      'created': '2024-01-05',
-    },
-    {
-      'id': 'SCH-003',
-      'name': 'Central School',
-      'email': 'admin@central.edu',
-      'phone': '+1 (555) 345-6789',
-      'address': '789 Central Blvd, Metro City',
-      'students': 450,
-      'buses': 8,
-      'status': 'expiring',
-      'subscription': 'Premium',
-      'created': '2023-11-15',
-    },
-    {
-      'id': 'SCH-004',
-      'name': 'Northwood School',
-      'email': 'support@northwood.edu',
-      'phone': '+1 (555) 456-7890',
-      'address': '101 Pine Rd, Northwood',
-      'students': 1000,
-      'buses': 25,
-      'status': 'active',
-      'subscription': 'Enterprise',
-      'created': '2024-01-10',
-    },
-    {
-      'id': 'SCH-005',
-      'name': 'Valley Prep',
-      'email': 'hello@valleyprep.edu',
-      'phone': '+1 (555) 567-8901',
-      'address': '202 Valley Dr, Valley Town',
-      'students': 150,
-      'buses': 4,
-      'status': 'trial',
-      'subscription': 'Basic',
-      'created': '2024-01-22',
-    },
-  ];
+  List<School> _schools = [];
+  SchoolStats? _stats;
 
   String _selectedStatus = 'all';
   String _selectedSubscription = 'all';
   final List<String> _statuses = ['all', 'active', 'expiring', 'trial', 'inactive'];
   final List<String> _subscriptions = ['all', 'premium', 'basic', 'enterprise', 'trial'];
 
+  final ApiService _apiService = ApiService();
+  bool _isLoading = true;
+  String _error = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  @override
+  void dispose() {
+    _apiService.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+      _error = '';
+    });
+
+    try {
+      final schools = await _apiService.getSchools(
+        status: _selectedStatus == 'all' ? null : _selectedStatus,
+        subscription: _selectedSubscription == 'all' ? null : _selectedSubscription,
+      );
+
+      final stats = await _apiService.getSchoolStats();
+
+      setState(() {
+        _schools = schools;
+        _stats = stats;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+
+      if (_schools.isEmpty) {
+        _loadMockData();
+      }
+    }
+  }
+
+  void _loadMockData() {
+    setState(() {
+      _schools = [
+        School(
+          schoolId: 'SCH-001',
+          name: 'Greenwood High',
+          email: 'contact@greenwood.edu',
+          phone: '+1 (555) 123-4567',
+          address: '123 Main St, Greenwood City',
+          students: 500,
+          buses: 10,
+          status: 'active',
+          subscription: 'Premium',
+          createdAt: DateTime(2023, 12, 1),
+        ),
+      ];
+      _stats = SchoolStats(
+        totalSchools: 42,
+        activeSchools: 38,
+        newThisMonth: 5,
+        totalStudents: 2300,
+        totalBuses: 52,
+        revenue: 12450.00,
+      );
+    });
+  }
+
+  void _handleStatusChange(String? value) {
+    if (value != null) {
+      setState(() {
+        _selectedStatus = value;
+      });
+      _loadData();
+    }
+  }
+
+  void _handleSubscriptionChange(String? value) {
+    if (value != null) {
+      setState(() {
+        _selectedSubscription = value;
+      });
+      _loadData();
+    }
+  }
   @override
   Widget build(BuildContext context) {
     final bool isDesktop = MediaQuery.of(context).size.width >= 1024;
+
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_error.isNotEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Error: $_error', style: TextStyle(color: Colors.red)),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _loadData,
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
 
     return isDesktop ? _buildDesktopLayout(context) : _buildMobileLayout(context);
   }
@@ -132,8 +185,10 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
         const SizedBox(height: 24),
 
         // Stats Grid
-        _buildStatsGrid(context),
-        const SizedBox(height: 15),
+        if (_stats != null) ...[
+          _buildStatsGrid(context),
+          const SizedBox(height: 15),
+        ],
 
         // Filters Card
         Card(
@@ -200,7 +255,7 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
 
         // Schools Table
         Expanded(
-          child: _buildDesktopTable(),
+          child: _schools.isEmpty ? const Center(child: Text('No schools found')) : _buildDesktopTable(),
         ),
       ],
     );
@@ -514,8 +569,8 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
                               backgroundColor: Colors.blue.withOpacity(0.1),
                               child: const Icon(Icons.school, size: 20, color: Colors.blue),
                             ),
-                            title: Text(school['name'], overflow: TextOverflow.ellipsis),
-                            subtitle: Text(school['address'], overflow: TextOverflow.ellipsis),
+                            title: Text(school.name, overflow: TextOverflow.ellipsis),
+                            subtitle: Text(school.address, overflow: TextOverflow.ellipsis),
                           ),
                         ),
                       ),
@@ -526,8 +581,8 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text(school['email'], overflow: TextOverflow.ellipsis),
-                              Text(school['phone'], overflow: TextOverflow.ellipsis),
+                              Text(school.email, overflow: TextOverflow.ellipsis),
+                              Text(school.phone, overflow: TextOverflow.ellipsis),
                             ],
                           ),
                         ),
@@ -539,7 +594,7 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  school['students'].toString(),
+                                  school.students.toString(),
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
@@ -556,7 +611,7 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  school['buses'].toString(),
+                                  school.buses.toString(),
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
@@ -573,25 +628,25 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
                       ),
                       DataCell(
                         Chip(
-                          label: Text(school['status'].toString().capitalize()),
-                          backgroundColor: _getStatusColor(school['status']).withOpacity(0.1),
+                          label: Text(school.status.toString().capitalize()),
+                          backgroundColor: _getStatusColor(school.status).withOpacity(0.1),
                           labelStyle: TextStyle(
-                            color: _getStatusColor(school['status']),
+                            color: _getStatusColor(school.status),
                             fontSize: 12,
                           ),
                         ),
                       ),
                       DataCell(
                         Chip(
-                          label: Text(school['subscription']),
-                          backgroundColor: _getSubscriptionColor(school['subscription']).withOpacity(0.1),
+                          label: Text(school.subscription),
+                          backgroundColor: _getSubscriptionColor(school.subscription).withOpacity(0.1),
                           labelStyle: TextStyle(
-                            color: _getSubscriptionColor(school['subscription']),
+                            color: _getSubscriptionColor(school.subscription),
                             fontSize: 12,
                           ),
                         ),
                       ),
-                      DataCell(Text(school['created'])),
+                      DataCell(Text(_formatDate(school.createdAt))),
                       DataCell(
                         PopupMenuButton(
                           itemBuilder: (context) => [
@@ -630,12 +685,13 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
                                 title: Text('Manage Buses'),
                               ),
                             ),
-                            const PopupMenuItem(
+                            PopupMenuItem(
                               value: 'delete',
                               child: ListTile(
                                 leading: Icon(Icons.delete, color: Colors.red),
                                 title: Text('Delete', style: TextStyle(color: Colors.red)),
                               ),
+                              onTap: () => _deleteSchool(school),
                             ),
                           ],
                         ),
@@ -651,7 +707,7 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
     );
   }
 
-  Widget _buildMobileSchoolItem(Map<String, dynamic> school, BuildContext context) {
+  Widget _buildMobileSchoolItem(School school, BuildContext context) {
     final bool isTablet = MediaQuery.of(context).size.width >= 768;
 
     return Padding(
@@ -671,14 +727,14 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      school['name'],
+                      school.name,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: isTablet ? 16 : 14,
                       ),
                     ),
                     Text(
-                      school['address'],
+                      school.address,
                       style: TextStyle(
                         fontSize: isTablet ? 13 : 11,
                         color: Colors.grey,
@@ -691,12 +747,12 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
               ),
               Chip(
                 label: Text(
-                  school['status'].toString().capitalize(),
+                  school.status.toString().capitalize(),
                   style: TextStyle(fontSize: isTablet ? 12 : 10),
                 ),
-                backgroundColor: _getStatusColor(school['status']).withOpacity(0.1),
+                backgroundColor: _getStatusColor(school.status).withOpacity(0.1),
                 labelStyle: TextStyle(
-                  color: _getStatusColor(school['status']),
+                  color: _getStatusColor(school.status),
                 ),
               ),
             ],
@@ -715,11 +771,11 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                school['email'],
+                school.email,
                 style: TextStyle(fontSize: isTablet ? 14 : 12),
               ),
               Text(
-                school['phone'],
+                school.phone,
                 style: TextStyle(fontSize: isTablet ? 14 : 12),
               ),
             ],
@@ -727,18 +783,18 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
-              _buildMobileStat('Students', school['students'].toString(), isTablet),
+              _buildMobileStat('Students', school.students.toString(), isTablet),
               const SizedBox(width: 16),
-              _buildMobileStat('Buses', school['buses'].toString(), isTablet),
+              _buildMobileStat('Buses', school.buses.toString(), isTablet),
               const Spacer(),
               Chip(
                 label: Text(
-                  school['subscription'],
+                  school.subscription,
                   style: TextStyle(fontSize: isTablet ? 12 : 10),
                 ),
-                backgroundColor: _getSubscriptionColor(school['subscription']).withOpacity(0.1),
+                backgroundColor: _getSubscriptionColor(school.subscription).withOpacity(0.1),
                 labelStyle: TextStyle(
-                  color: _getSubscriptionColor(school['subscription']),
+                  color: _getSubscriptionColor(school.subscription),
                 ),
               ),
             ],
@@ -795,6 +851,21 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
   }
 
   void _showAddSchoolDialog() {
+    // Create controllers for form fields
+    final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+    final TextEditingController _nameController = TextEditingController();
+    final TextEditingController _emailController = TextEditingController();
+    final TextEditingController _phoneController = TextEditingController();
+    final TextEditingController _contactPersonController = TextEditingController();
+    final TextEditingController _addressController = TextEditingController();
+    final TextEditingController _cityController = TextEditingController();
+    final TextEditingController _countryController = TextEditingController();
+    final TextEditingController _studentsController = TextEditingController(text: '0');
+    final TextEditingController _busesController = TextEditingController(text: '0');
+
+    String _selectedStatus = 'active';
+    String _selectedSubscription = 'Basic';
+
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -802,123 +873,409 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
           constraints: const BoxConstraints(maxWidth: 600),
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Add New School',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Add New School',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                GridView.count(
-                  shrinkWrap: true,
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 3,
-                  children: [
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'School Name',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Phone',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Contact Person',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Address',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'City',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Country',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(
-                        labelText: 'Subscription Plan',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: ['Basic', 'Premium', 'Enterprise', 'Trial']
-                          .map((plan) => DropdownMenuItem(
-                        value: plan,
-                        child: Text(plan),
-                      ))
-                          .toList(),
-                      onChanged: (value) {},
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
+                      IconButton(
+                        icon: const Icon(Icons.close),
                         onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancel'),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('School added successfully'),
-                              backgroundColor: Colors.green,
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Make the form scrollable for mobile
+                  SingleChildScrollView(
+                    child: GridView.count(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 5,
+                      children: [
+                        // School Name (Required)
+                        TextFormField(
+                          controller: _nameController,
+                          decoration: const InputDecoration(
+                            labelText: 'School Name *',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.school),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter school name';
+                            }
+                            return null;
+                          },
+                        ),
+
+                        // Email (Required)
+                        TextFormField(
+                          controller: _emailController,
+                          decoration: const InputDecoration(
+                            labelText: 'Email *',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.email),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter email';
+                            }
+                            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                              return 'Please enter a valid email';
+                            }
+                            return null;
+                          },
+                        ),
+
+                        // Phone (Required)
+                        TextFormField(
+                          controller: _phoneController,
+                          decoration: const InputDecoration(
+                            labelText: 'Phone *',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.phone),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter phone number';
+                            }
+                            return null;
+                          },
+                        ),
+
+                        // Contact Person
+                        TextFormField(
+                          controller: _contactPersonController,
+                          decoration: const InputDecoration(
+                            labelText: 'Contact Person',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.person),
+                          ),
+                        ),
+
+                        // Address (Required)
+                        TextFormField(
+                          controller: _addressController,
+                          maxLines: 2,
+                          decoration: const InputDecoration(
+                            labelText: 'Address *',
+                            border: OutlineInputBorder(),
+                            alignLabelWithHint: true,
+                            prefixIcon: Icon(Icons.location_on),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter address';
+                            }
+                            return null;
+                          },
+                        ),
+
+                        // City (Required)
+                        TextFormField(
+                          controller: _cityController,
+                          decoration: const InputDecoration(
+                            labelText: 'City *',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.location_city),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter city';
+                            }
+                            return null;
+                          },
+                        ),
+
+                        // Country (Required)
+                        TextFormField(
+                          controller: _countryController,
+                          decoration: const InputDecoration(
+                            labelText: 'Country *',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.public),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter country';
+                            }
+                            return null;
+                          },
+                        ),
+
+                        // Status Dropdown
+                        DropdownButtonFormField<String>(
+                          value: _selectedStatus,
+                          decoration: const InputDecoration(
+                            labelText: 'Status',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.circle),
+                          ),
+                          items: [
+                            DropdownMenuItem(
+                              value: 'active',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.circle, size: 12, color: Colors.green),
+                                  const SizedBox(width: 8),
+                                  const Text('Active'),
+                                ],
+                              ),
                             ),
-                          );
-                        },
-                        child: const Text('Add School'),
-                      ),
+                            DropdownMenuItem(
+                              value: 'trial',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.circle, size: 12, color: Colors.orange),
+                                  const SizedBox(width: 8),
+                                  const Text('Trial'),
+                                ],
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: 'expiring',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.circle, size: 12, color: Colors.yellow[700]),
+                                  const SizedBox(width: 8),
+                                  const Text('Expiring'),
+                                ],
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: 'inactive',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.circle, size: 12, color: Colors.red),
+                                  const SizedBox(width: 8),
+                                  const Text('Inactive'),
+                                ],
+                              ),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) {
+                              _selectedStatus = value;
+                            }
+                          },
+                        ),
+
+                        // Subscription Plan
+                        DropdownButtonFormField<String>(
+                          value: _selectedSubscription,
+                          decoration: const InputDecoration(
+                            labelText: 'Subscription Plan *',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.subscriptions),
+                          ),
+                          items: ['Basic', 'Premium', 'Enterprise', 'Trial']
+                              .map((plan) => DropdownMenuItem(
+                            value: plan,
+                            child: Text(plan),
+                          ))
+                              .toList(),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please select subscription plan';
+                            }
+                            return null;
+                          },
+                          onChanged: (value) {
+                            if (value != null) {
+                              _selectedSubscription = value;
+                            }
+                          },
+                        ),
+
+                        // Number of Students
+                        TextFormField(
+                          controller: _studentsController,
+                          decoration: const InputDecoration(
+                            labelText: 'Number of Students',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.people),
+                          ),
+                          keyboardType: TextInputType.number,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter number of students';
+                            }
+                            final int? students = int.tryParse(value);
+                            if (students == null || students < 0) {
+                              return 'Please enter a valid number';
+                            }
+                            return null;
+                          },
+                        ),
+
+                        // Number of Buses
+                        TextFormField(
+                          controller: _busesController,
+                          decoration: const InputDecoration(
+                            labelText: 'Number of Buses',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.directions_bus),
+                          ),
+                          keyboardType: TextInputType.number,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter number of buses';
+                            }
+                            final int? buses = int.tryParse(value);
+                            if (buses == null || buses < 0) {
+                              return 'Please enter a valid number';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Additional Info
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.info, size: 16, color: Theme.of(context).colorScheme.primary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Fields marked with * are required',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            // Clean up controllers
+                            _nameController.dispose();
+                            _emailController.dispose();
+                            _phoneController.dispose();
+                            _contactPersonController.dispose();
+                            _addressController.dispose();
+                            _cityController.dispose();
+                            _countryController.dispose();
+                            _studentsController.dispose();
+                            _busesController.dispose();
+                          },
+                          child: const Text('Cancel'),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            // Validate form
+                            if (_formKey.currentState!.validate()) {
+                              // Show loading indicator
+                              showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (context) => const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              );
+
+                              try {
+                                // Create School object from form data
+                                final school = School(
+                                  schoolId: '', // Will be generated by backend
+                                  name: _nameController.text.trim(),
+                                  email: _emailController.text.trim(),
+                                  phone: _phoneController.text.trim(),
+                                  address: '${_addressController.text.trim()}, ${_cityController.text.trim()}, ${_countryController.text.trim()}',
+                                  students: int.parse(_studentsController.text),
+                                  buses: int.parse(_busesController.text),
+                                  status: _selectedStatus,
+                                  subscription: _selectedSubscription,
+                                  createdAt: DateTime.now(),
+                                );
+
+                                // Call API to add school
+                                final newSchool = await _apiService.addSchool(school);
+
+                                // Close loading dialog
+                                Navigator.pop(context);
+
+                                // Close add school dialog
+                                Navigator.pop(context);
+
+                                // Update local schools list
+                                setState(() {
+                                  _schools.insert(0, newSchool);
+                                });
+
+                                // Show success message
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Text('School added successfully'),
+                                    backgroundColor: Colors.green,
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+
+                                // Refresh stats
+                                _loadData();
+
+                              } catch (e) {
+                                // Close loading dialog
+                                Navigator.pop(context);
+
+                                // Show error message
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Failed to add school: $e'),
+                                    backgroundColor: Colors.red,
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          child: const Text('Add School'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
   Color _getStatusColor(String status) {
@@ -948,6 +1305,45 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
         return Colors.orange.shade200;
       default:
         return Colors.grey;
+    }
+  }
+
+  Future<void> _deleteSchool(School school) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete School'),
+        content: Text('Are you sure you want to delete ${school.name}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try{
+        await _apiService.deleteSchool(school.schoolId);
+        setState(() {
+          _schools.removeWhere((s) => s.schoolId == school.schoolId);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('School deleted successfully'), backgroundColor: Colors.greenAccent,),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete school: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 }

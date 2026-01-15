@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:bustracker_007/core/utils/string_extensions.dart';
 import 'package:bustracker_007/data/models/web/school/school_model.dart';
 import 'package:bustracker_007/core/services/api_service.dart';
+import '../widgets/school_details_dialog.dart';
+import '../widgets/edit_school_dialog.dart';
 
 class SchoolsScreen extends StatefulWidget {
   const SchoolsScreen({super.key});
@@ -649,40 +651,41 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
                       DataCell(Text(_formatDate(school.createdAt))),
                       DataCell(
                         PopupMenuButton(
+                          shadowColor: Colors.green,
                           itemBuilder: (context) => [
                             const PopupMenuItem(
                               value: 'view',
                               child: ListTile(
-                                leading: Icon(Icons.remove_red_eye),
-                                title: Text('View Details'),
+                                leading: Icon(Icons.remove_red_eye, color: Colors.grey,),
+                                title: Text('View Details', style: TextStyle(color: Colors.grey),),
                               ),
                             ),
                             const PopupMenuItem(
                               value: 'edit',
                               child: ListTile(
-                                leading: Icon(Icons.edit),
-                                title: Text('Edit School'),
+                                leading: Icon(Icons.edit, color: Colors.grey,),
+                                title: Text('Edit School', style: TextStyle(color: Colors.grey),),
                               ),
                             ),
                             const PopupMenuItem(
                               value: 'subscription',
                               child: ListTile(
-                                leading: Icon(Icons.subscriptions),
-                                title: Text('Manage Subscription'),
+                                leading: Icon(Icons.subscriptions, color: Colors.grey,),
+                                title: Text('Manage Subscription', style: TextStyle(color: Colors.grey),),
                               ),
                             ),
                             const PopupMenuItem(
                               value: 'users',
                               child: ListTile(
-                                leading: Icon(Icons.people),
-                                title: Text('Manage Users'),
+                                leading: Icon(Icons.people, color: Colors.grey,),
+                                title: Text('Manage Users', style: TextStyle(color: Colors.grey),),
                               ),
                             ),
                             const PopupMenuItem(
                               value: 'buses',
                               child: ListTile(
-                                leading: Icon(Icons.directions_bus),
-                                title: Text('Manage Buses'),
+                                leading: Icon(Icons.directions_bus, color: Colors.grey,),
+                                title: Text('Manage Buses', style: TextStyle(color: Colors.grey),),
                               ),
                             ),
                             PopupMenuItem(

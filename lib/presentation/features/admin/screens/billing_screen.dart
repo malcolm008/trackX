@@ -2360,7 +2360,7 @@ class InvoiceDetailsDialog extends StatelessWidget {
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
                             ),
-                              textAlign: TextAlign.center,
+                            textAlign: TextAlign.center,
                           ),
                         ),
                         Expanded(
@@ -2659,3 +2659,4 @@ class InvoiceDetailsDialog extends StatelessWidget {
 }
 // Other dialog classes (EditPlanDialog, AssignPlanDialog, InvoiceDetailsDialog)
 // should be similarly updated with proper type annotations
+

@@ -1,4 +1,5 @@
 import 'package:bustracker_007/core/repositories/school_repository.dart';
+import 'package:bustracker_007/presentation/features/admin/widgets/view_school_dialog.dart';
 import 'package:flutter/material.dart';
 import '../../../../data/models/web/school.dart';
 import '../widgets/add_school_dialog.dart';
@@ -12,10 +13,11 @@ class SchoolsScreen extends StatefulWidget {
 
 class _SchoolsScreenState extends State<SchoolsScreen> {
   final SchoolRepository _schoolRepository = SchoolRepository();
-  late Future<List<School>> _schoolsFuture;
   late Future<Map<String, dynamic>> _statsFuture;
+  bool _isLoading = true;
 
-  List<School> _schools = [];
+  List<School> _allSchools = [];
+  List<School> _filteredSchools = [];
   String _selectedStatus = 'all';
   String _selectedSubscription = 'all';
   final TextEditingController _searchController = TextEditingController();
@@ -24,17 +26,41 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _loadSchools();
   }
 
-  void _loadData() {
+  Future<void> _loadSchools() async {
+    setState(() => _isLoading = true);
+
+    final schools = await _schoolRepository.getSchools();
+    final stats = await _schoolRepository.getSchoolStats();
+
     setState(() {
-      _schoolsFuture = _schoolRepository.getSchools(
-        status: _selectedStatus != 'all' ? _selectedStatus : null,
-      );
-      _statsFuture = _schoolRepository.getSchoolStats();
+      _allSchools = schools;
+      _filteredSchools = schools;
+      _statsFuture = Future.value(stats);
+      _isLoading = false;
     });
   }
+
+  void _applyFilters() {
+    final query = _searchController.text.toLowerCase();
+
+    setState(() {
+      _filteredSchools = _allSchools.where((school) {
+        final matchesSearch =
+            school.name.toLowerCase().contains(query) ||
+                (school.address ?? '').toLowerCase().contains(query) ||
+                school.email.toLowerCase().contains(query);
+
+        final matchesStatus =
+            _selectedStatus == 'all' || school.status.toLowerCase() == _selectedStatus;
+
+        return matchesSearch && matchesStatus;
+      }).toList();
+    });
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -43,129 +69,113 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
   }
 
   Widget _buildDesktopLayout(BuildContext context) {
-    return FutureBuilder<List<School>>(
-        future: _schoolsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text('No schools found'));
-          }
-          _schools = snapshot.data!;
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Schools Management',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Manage all registered schools and institutions',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(Icons.map_outlined),
-                        label: const Text('View on Map'),
-                      ),
-                      const SizedBox(width: 12),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          _showAddSchoolDialog();
-                        },
-                        icon: const Icon(Icons.add_business),
-                        label: const Text('Add School'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              FutureBuilder<Map<String,dynamic>>(
-                  future: _statsFuture,
-                  builder: (context, statsSnapshot) {
-                    if (statsSnapshot.connectionState == ConnectionState.waiting) {
-                      return const CircularProgressIndicator();
-                    }
-                    if (statsSnapshot.hasData) {
-                      return _buildStatsGrid(context, statsSnapshot.data!);
-                    }
-                    return const SizedBox.shrink();
-                  }
-              ),
-              const SizedBox(height: 15),
-
-              // Filters Card
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              decoration: InputDecoration(
-                                hintText: 'Search schools by name, location, or ID...',
-                                prefixIcon: const Icon(Icons.search),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          DropdownButton<String>(
-                            value: _selectedStatus,
-                            items: ['all', 'active', 'expiring', 'trial', 'inactive'].map((status) {
-                              return DropdownMenuItem(
-                                value: status,
-                                child: Text(status.capitalize()),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedStatus = value!;
-                                _loadData();
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-                    ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Schools Management',
+                  style: Theme.of(context)
+                      .textTheme
+                      .headlineSmall
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Manage all registered schools and institutions',
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.7),
                   ),
                 ),
-              ),
-              const SizedBox(height: 10),
+              ],
+            ),
+            ElevatedButton.icon(
+              onPressed: _showAddSchoolDialog,
+              icon: const Icon(Icons.add_business),
+              label: const Text('Add School'),
+            ),
+          ],
+        ),
 
-              // Schools Table
-              Expanded(
-                child: _buildDesktopTable(),
-              ),
-            ],
-          );
-        }
+        const SizedBox(height: 24),
+
+        // Stats
+        FutureBuilder<Map<String, dynamic>>(
+          future: _statsFuture,
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const SizedBox.shrink();
+            return _buildStatsGrid(context, snapshot.data!);
+          },
+        ),
+
+        const SizedBox(height: 15),
+
+        // Filters
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: (_) => _applyFilters(),
+                        decoration: InputDecoration(
+                          hintText: 'Search schools by name, location, or ID...',
+                          prefixIcon: const Icon(Icons.search),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    DropdownButton<String>(
+                      value: _selectedStatus,
+                      items: ['all', 'active', 'expiring', 'trial', 'inactive'].map((status) {
+                        return DropdownMenuItem(
+                          value: status,
+                          child: Text(status.capitalize()),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        _selectedStatus = value!;
+                        _applyFilters();
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        // TABLE
+        Expanded(child: _buildDesktopTable()),
+      ],
     );
   }
+
 
   Widget _buildMobileLayout(BuildContext context) {
     final bool isTablet = MediaQuery.of(context).size.width >= 768;
@@ -219,6 +229,8 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
                 child: Column(
                   children: [
                     TextField(
+                      controller: _searchController,
+                      onChanged: (_) => _applyFilters(),
                       decoration: InputDecoration(
                         hintText: 'Search schools...',
                         prefixIcon: const Icon(Icons.search),
@@ -245,9 +257,8 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
                               );
                             }).toList(),
                             onChanged: (value) {
-                              setState(() {
-                                _selectedStatus = value!;
-                              });
+                              _selectedStatus = value!;
+                              _applyFilters();
                             },
                           ),
                         ),
@@ -256,14 +267,6 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () {},
-                            icon: const Icon(Icons.map_outlined),
-                            label: const Text('View Map'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton.icon(
                             onPressed: () {
@@ -286,7 +289,7 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Schools (${_schools.length})',
+                  'Schools (${_filteredSchools.length})',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -301,7 +304,7 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
             const SizedBox(height: 12),
 
             // Schools List
-            ..._schools.map((school) {
+            ..._filteredSchools.map((school) {
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
                 child: _buildMobileSchoolItem(school, context),
@@ -402,11 +405,6 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
                   ),
                   child: Icon(icon, color: color, size: 20),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.more_vert, size: 18),
-                  onPressed: () {},
-                  padding: EdgeInsets.zero,
-                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -432,6 +430,9 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
   }
 
   Widget _buildDesktopTable() {
+    if (_filteredSchools.isEmpty) {
+      return const Center(child: Text('No schools found'));
+    }
     return SingleChildScrollView(
       child: Card(
         child: Padding(
@@ -451,7 +452,7 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
                   DataColumn(label: Text('Created')),
                   DataColumn(label: Text('Actions')),
                 ],
-                rows: _schools.map((school) {
+                rows: _filteredSchools.map((school) {
                   return DataRow(
                     cells: [
                       DataCell(
@@ -549,13 +550,6 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
                                 title: Text('Edit School', style: TextStyle(color: Colors.grey),),
                               ),
                               onTap: () => _editSchool(school),
-                            ),
-                            const PopupMenuItem(
-                              value: 'subscription',
-                              child: ListTile(
-                                leading: Icon(Icons.subscriptions, color: Colors.grey),
-                                title: Text('Manage Subscription', style: TextStyle(color: Colors.grey)),
-                              ),
                             ),
                             const PopupMenuItem(
                               value: 'users',
@@ -679,7 +673,7 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () {},
+                  onPressed: () => _viewSchoolDetails(school),
                   icon: Icon(Icons.remove_red_eye, size: isTablet ? 16 : 14),
                   label: Text('View', style: TextStyle(fontSize: isTablet ? 14 : 12)),
                 ),
@@ -687,7 +681,7 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () {},
+                  onPressed: () => _editSchool(school),
                   icon: Icon(Icons.edit, size: isTablet ? 16 : 14),
                   label: Text('Edit', style: TextStyle(fontSize: isTablet ? 14 : 12)),
                 ),
@@ -732,7 +726,7 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
     );
 
     if (result == true) {
-      _loadData(); // Refresh data
+      _loadSchools();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('School added successfully'),
@@ -743,7 +737,10 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
   }
 
   void _viewSchoolDetails(School school) {
-    // Navigate to school details screen
+    showDialog(
+      context: context,
+      builder: (_) => ViewSchoolDialog(school: school),
+    );
   }
 
   void _editSchool(School school) async {
@@ -753,7 +750,7 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
     );
 
     if (result == true) {
-      _loadData(); // Refresh data
+      _loadSchools();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('School updated successfully'),
@@ -785,7 +782,7 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
     if (confirmed == true) {
       try {
         await _schoolRepository.deleteSchool(school.id!);
-        _loadData(); // Refresh data
+        _loadSchools();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${school.name} deleted successfully'),

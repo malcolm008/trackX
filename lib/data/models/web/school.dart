@@ -32,8 +32,14 @@ class School {
   });
 
   factory School.fromJson(Map<String, dynamic> json) {
+    int parseInt(dynamic value) {
+      if (value == null) return 0;
+      if (value is int) return value;
+      return int.tryParse(value.toString()) ?? 0;
+    }
+
     return School(
-      id: json['id'],
+      id: parseInt(json['id']),
       schoolCode: json['school_code'] ?? '',
       name: json['name'] ?? '',
       email: json['email'] ?? '',
@@ -42,8 +48,8 @@ class School {
       city: json['city'],
       country: json['country'],
       contactPerson: json['contact_person'],
-      totalStudents: json['total_students'] ?? 0,
-      totalBuses: json['total_buses'] ?? 0,
+      totalStudents: parseInt(json['total_students']),
+      totalBuses: parseInt(json['total_buses']),
       status: json['status'] ?? 'active',
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),

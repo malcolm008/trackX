@@ -1,4 +1,6 @@
+import 'package:bustracker_007/core/services/api_service.dart';
 import 'package:flutter/material.dart';
+import '../../../../data/models/web/subscription_plan.dart';
 
 class BillingScreen extends StatefulWidget {
   const BillingScreen({super.key});
@@ -13,6 +15,7 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
   String _selectedFilter = 'all';
 
   // Mock data
+  final ApiService _apiService = ApiService();
   final List<Map<String, dynamic>> _subscriptions = [
     {
       'id': '1',
@@ -92,68 +95,7 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
     },
   ];
 
-  final List<Map<String, dynamic>> _availablePlans = [
-    {
-      'name': 'Basic',
-      'description': 'Essential tracking for small schools',
-      'price': 149.99,
-      'billingCycle': 'Monthly',
-      'features': [
-        'Up to 100 students',
-        'Live GPS tracking',
-        '500 notifications/month',
-        '3 months data retention',
-        'Email support',
-        'Basic reports',
-      ],
-      'limitations': [
-        'No API access',
-        'Limited customization',
-        'Standard GPS accuracy',
-      ],
-    },
-    {
-      'name': 'Pro',
-      'description': 'Advanced features for growing institutions',
-      'price': 299.99,
-      'billingCycle': 'Monthly',
-      'features': [
-        'Up to 250 students',
-        'High-accuracy GPS',
-        '1000 notifications/month',
-        '6 months data retention',
-        'Priority support',
-        'Advanced analytics',
-        'Custom branding',
-        'API access',
-      ],
-      'limitations': [
-        'Limited to 5 admins',
-        'No white-labeling',
-      ],
-    },
-    {
-      'name': 'Enterprise',
-      'description': 'Complete solution for large districts',
-      'price': 499.99,
-      'billingCycle': 'Monthly',
-      'features': [
-        'Unlimited students',
-        'Real-time GPS tracking',
-        'Unlimited notifications',
-        '1 year data retention',
-        '24/7 dedicated support',
-        'Advanced AI analytics',
-        'White-label solution',
-        'Full API access',
-        'Custom integrations',
-        'SLA guarantee',
-        'Bulk operations',
-        'Advanced security',
-      ],
-      'limitations': [],
-    },
-  ];
+  List<SubscriptionPlan> _availablePlans = [];
 
   final List<Map<String, dynamic>> _invoices = [
     {
@@ -187,11 +129,39 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
       ],
     },
   ];
+  bool _isLoading = true;
+  String _errorMessage = '';
+
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadPlans();
+  }
+
+  Future<void> _loadPlans() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
+
+    try {
+      final plans = await _apiService.getAllPlans();
+      setState(() {
+        _availablePlans = plans;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to load plans: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _refreshPlans() async {
+    await _loadPlans();
   }
 
   @override
@@ -678,54 +648,76 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
   }
 
   Widget _buildPlansTab(bool isDesktop, bool isTablet) {
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: isDesktop ? 0 : 8,
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              ElevatedButton.icon(
-                onPressed: _showCreatePlanDialog,
-                icon: const Icon(Icons.add),
-                label: isDesktop || isTablet
-                    ? const Text('Create New Plan')
-                    : const Text('New Plan'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-          // Responsive grid for plans
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final crossAxisCount = isDesktop ? 3 : (isTablet ? 2 : 1);
-                return GridView.builder(
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: crossAxisCount,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: isDesktop ? 0.8 : 0.9,
-                  ),
-                  itemCount: _availablePlans.length,
-                  itemBuilder: (context, index) {
-                    return _buildPlanCard(_availablePlans[index], isDesktop);
-                  },
-                );
-              },
+    if (_errorMessage.isNotEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(_errorMessage, style: const TextStyle(color: Colors.red)),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loadPlans,
+              child: const Text('Retry'),
             ),
-          ),
-        ],
+          ],
+        ),
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: _refreshPlans,
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: isDesktop ? 0 : 8,
+        ),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _showCreatePlanDialog,
+                  icon: const Icon(Icons.add),
+                  label: isDesktop || isTablet
+                      ? const Text('Create New Plan')
+                      : const Text('New Plan'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Responsive grid for plans
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final crossAxisCount = isDesktop ? 3 : (isTablet ? 2 : 1);
+                  return GridView.builder(
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: isDesktop ? 0.8 : 0.9,
+                    ),
+                    itemCount: _availablePlans.length,
+                    itemBuilder: (context, index) {
+                      return _buildPlanCard(_availablePlans[index], isDesktop);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildPlanCard(Map<String, dynamic> plan, bool isDesktop) {
-    final features = plan['features'] as List<dynamic>;
-    final limitations = plan['limitations'] as List<dynamic>;
+  Widget _buildPlanCard(SubscriptionPlan plan, bool isDesktop) {
+    final features = plan.features ?? {};
+    final limitations = plan.limitations ?? {};
 
     return Card(
       elevation: 4,
@@ -738,67 +730,103 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: Text(
-                    plan['name'] as String,
-                    style: TextStyle(
-                      fontSize: isDesktop ? 20 : 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        plan.name,
+                        style: TextStyle(
+                          fontSize: isDesktop ? 20 : 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (plan.planCode.isNotEmpty)
+                        Text(
+                          plan.planCode,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.edit, size: 20),
-                  onPressed: () => _editPlan(plan),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit, size: 20),
+                      onPressed: () => _editPlan(plan),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+                      onPressed: () => _deletePlan(plan),
+                    ),
+                  ],
                 ),
               ],
             ),
             const SizedBox(height: 4),
             Text(
-              plan['description'] as String,
+              plan.description,
               style: const TextStyle(fontSize: 12, color: Colors.grey),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 16),
             Text(
-              '\$${(plan['price'] as double).toStringAsFixed(2)}/${(plan['billingCycle'] as String).toLowerCase()}',
+              '\$${plan.price.toStringAsFixed(2)}/${plan.billingCycle.toLowerCase()}',
               style: TextStyle(
                 fontSize: isDesktop ? 24 : 20,
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).colorScheme.primary,
               ),
             ),
+            if (plan.maxStudents != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Max Students: ${plan.maxStudents}',
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+            if (plan.maxBuses != null) ...[
+              Text(
+                'Max Buses: ${plan.maxBuses}',
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
             const SizedBox(height: 16),
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Features:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                    if (features.isNotEmpty) ...[
+                      const Text(
+                        'Features:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    ...features.map<Widget>((feature) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(Icons.check, color: Colors.green, size: 16),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              feature.toString(),
-                              style: const TextStyle(fontSize: 12),
+                      const SizedBox(height: 8),
+                      ...features.entries.map<Widget>((feature) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.check, color: Colors.green, size: 16),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                feature.toString(),
+                                style: const TextStyle(fontSize: 12),
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    )),
+                          ],
+                        ),
+                      )),
+                    ],
                     if (limitations.isNotEmpty) ...[
                       const SizedBox(height: 12),
                       const Text(
@@ -809,7 +837,7 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
                         ),
                       ),
                       const SizedBox(height: 8),
-                      ...limitations.map<Widget>((limitation) => Padding(
+                      ...limitations.entries.map<Widget>((limitation) => Padding(
                         padding: const EdgeInsets.only(bottom: 4),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1142,8 +1170,8 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
                   border: OutlineInputBorder(),
                 ),
                 items: _availablePlans.map<DropdownMenuItem<String>>((plan) {
-                  final planName = plan['name'] as String;
-                  final planPrice = plan['price'] as double;
+                  final planName = plan.name;
+                  final planPrice = plan.price;
                   return DropdownMenuItem<String>(
                     value: planName,
                     child: Text('$planName - \$$planPrice'),
@@ -1200,10 +1228,21 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
     showDialog(
       context: context,
       builder: (context) => CreatePlanDialog(
-        onPlanCreated: (newPlan) {
-          setState(() {
-            _availablePlans.add(newPlan);
-          });
+        onPlanCreated: (newPlan) async {
+          try {
+            final createdPlan = await _apiService.createPlan(newPlan);
+            setState(() {
+              _availablePlans.add(createdPlan);
+            });
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Plan created successfully')),
+            );
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Failed to create plan: $e')),
+            );
+          }
         },
       ),
     );
@@ -1226,23 +1265,76 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
     );
   }
 
-  void _editPlan(Map<String, dynamic> plan) {
+  void _editPlan(SubscriptionPlan plan) {
     showDialog(
       context: context,
       builder: (context) => EditPlanDialog(
         plan: plan,
-        onSave: (updatedPlan) {
-          setState(() {
-            final index = _availablePlans.indexWhere((p) => p['name'] == plan['name']);
-            if (index != -1) {
-              _availablePlans[index] = updatedPlan;
+        onSave: (updatedPlan) async {
+          try {
+            if (plan.id != null) {
+              await _apiService.updatePlan(plan.id!, updatedPlan);
+              setState(() {
+                final index = _availablePlans.indexWhere((p) => p.id == plan.id);
+                if (index != -1) {
+                  _availablePlans[index] = updatedPlan;
+                }
+              });
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Plan updated successfully')),
+              );
             }
-          });
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Failed to update plan: $e')),
+            );
+          }
         },
       ),
     );
   }
 
+  void _deletePlan(SubscriptionPlan plan) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Plan'),
+        content: Text('Are you sure you want to delete ${plan.name}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                if (plan.id != null) {
+                  await _apiService.deletePlan(plan.id!);
+                  setState(() {
+                    _availablePlans.removeWhere((p) => p.id == plan.id);
+                  });
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Plan ${plan.name} deleted'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Failed to delete plan: $e')),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
 
   void _deleteSubscription(Map<String, dynamic> subscription) {
     showDialog(
@@ -1280,7 +1372,7 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
     // Navigate to invoice details
   }
 
-  void _assignPlan(Map<String, dynamic> plan) {
+  void _assignPlan(SubscriptionPlan plan) {
     showDialog(
       context: context,
       builder: (context) => AssignPlanDialog(plan: plan),
@@ -1317,7 +1409,7 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
 // but need to be updated with proper type annotations
 
 class CreatePlanDialog extends StatefulWidget {
-  final Function(Map<String, dynamic>) onPlanCreated;
+  final Function(SubscriptionPlan) onPlanCreated; // Expects SubscriptionPlan
 
   const CreatePlanDialog({super.key, required this.onPlanCreated});
 
@@ -1327,14 +1419,20 @@ class CreatePlanDialog extends StatefulWidget {
 
 class _CreatePlanDialogState extends State<CreatePlanDialog> {
   final _formKey = GlobalKey<FormState>();
+  final _planCodeController = TextEditingController();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
-  final _featureController = TextEditingController();
-  final _limitationController = TextEditingController();
-  String _billingCycle = 'Monthly';
-  final List<String> _features = [];
-  final List<String> _limitations = [];
+  final _maxStudentsController = TextEditingController();
+  final _maxBusesController = TextEditingController();
+  final _featureKeyController = TextEditingController();
+  final _featureValueController = TextEditingController();
+  final _limitationKeyController = TextEditingController();
+  final _limitationValueController = TextEditingController();
+
+  String _billingCycle = 'monthly';
+  final Map<String, dynamic> _features = {};
+  final Map<String, dynamic> _limitations = {};
 
   @override
   Widget build(BuildContext context) {
@@ -1346,6 +1444,20 @@ class _CreatePlanDialogState extends State<CreatePlanDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              TextFormField(
+                controller: _planCodeController,
+                decoration: const InputDecoration(
+                  labelText: 'Plan Code (e.g., BASIC001)',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter plan code';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(
@@ -1379,7 +1491,7 @@ class _CreatePlanDialogState extends State<CreatePlanDialog> {
                         border: OutlineInputBorder(),
                         prefixText: '\$',
                       ),
-                      keyboardType: TextInputType.number,
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter price';
@@ -1401,15 +1513,15 @@ class _CreatePlanDialogState extends State<CreatePlanDialog> {
                       ),
                       items: const [
                         DropdownMenuItem<String>(
-                          value: 'Monthly',
+                          value: 'monthly',
                           child: Text('Monthly'),
                         ),
                         DropdownMenuItem<String>(
-                          value: 'Quarterly',
+                          value: 'quarterly',
                           child: Text('Quarterly'),
                         ),
                         DropdownMenuItem<String>(
-                          value: 'Annual',
+                          value: 'annual',
                           child: Text('Annual'),
                         ),
                       ],
@@ -1422,6 +1534,32 @@ class _CreatePlanDialogState extends State<CreatePlanDialog> {
                   ),
                 ],
               ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _maxStudentsController,
+                      decoration: const InputDecoration(
+                        labelText: 'Max Students (optional)',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _maxBusesController,
+                      decoration: const InputDecoration(
+                        labelText: 'Max Buses (optional)',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 16),
 
               // Features
@@ -1430,26 +1568,36 @@ class _CreatePlanDialogState extends State<CreatePlanDialog> {
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _features.map((feature) => Chip(
-                  label: Text(feature),
-                  onDeleted: () {
-                    setState(() {
-                      _features.remove(feature);
-                    });
-                  },
-                )).toList(),
-              ),
+              if (_features.isNotEmpty)
+                ..._features.entries.map((entry) => ListTile(
+                  title: Text('${entry.key}: ${entry.value}'),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete, size: 16),
+                    onPressed: () {
+                      setState(() {
+                        _features.remove(entry.key);
+                      });
+                    },
+                  ),
+                )),
               const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(
                     child: TextField(
-                      controller: _featureController,
+                      controller: _featureKeyController,
                       decoration: const InputDecoration(
-                        hintText: 'Add feature...',
+                        hintText: 'Feature key...',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _featureValueController,
+                      decoration: const InputDecoration(
+                        hintText: 'Feature value...',
                         border: OutlineInputBorder(),
                       ),
                     ),
@@ -1457,10 +1605,13 @@ class _CreatePlanDialogState extends State<CreatePlanDialog> {
                   IconButton(
                     icon: const Icon(Icons.add),
                     onPressed: () {
-                      if (_featureController.text.isNotEmpty) {
+                      if (_featureKeyController.text.isNotEmpty &&
+                          _featureValueController.text.isNotEmpty) {
                         setState(() {
-                          _features.add(_featureController.text);
-                          _featureController.clear();
+                          _features[_featureKeyController.text] =
+                              _featureValueController.text;
+                          _featureKeyController.clear();
+                          _featureValueController.clear();
                         });
                       }
                     },
@@ -1476,26 +1627,36 @@ class _CreatePlanDialogState extends State<CreatePlanDialog> {
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _limitations.map((limitation) => Chip(
-                  label: Text(limitation),
-                  onDeleted: () {
-                    setState(() {
-                      _limitations.remove(limitation);
-                    });
-                  },
-                )).toList(),
-              ),
+              if (_limitations.isNotEmpty)
+                ..._limitations.entries.map((entry) => ListTile(
+                  title: Text('${entry.key}: ${entry.value}'),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete, size: 16),
+                    onPressed: () {
+                      setState(() {
+                        _limitations.remove(entry.key);
+                      });
+                    },
+                  ),
+                )),
               const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(
                     child: TextField(
-                      controller: _limitationController,
+                      controller: _limitationKeyController,
                       decoration: const InputDecoration(
-                        hintText: 'Add limitation...',
+                        hintText: 'Limitation key...',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _limitationValueController,
+                      decoration: const InputDecoration(
+                        hintText: 'Limitation value...',
                         border: OutlineInputBorder(),
                       ),
                     ),
@@ -1503,10 +1664,13 @@ class _CreatePlanDialogState extends State<CreatePlanDialog> {
                   IconButton(
                     icon: const Icon(Icons.add),
                     onPressed: () {
-                      if (_limitationController.text.isNotEmpty) {
+                      if (_limitationKeyController.text.isNotEmpty &&
+                          _limitationValueController.text.isNotEmpty) {
                         setState(() {
-                          _limitations.add(_limitationController.text);
-                          _limitationController.clear();
+                          _limitations[_limitationKeyController.text] =
+                              _limitationValueController.text;
+                          _limitationKeyController.clear();
+                          _limitationValueController.clear();
                         });
                       }
                     },
@@ -1525,25 +1689,46 @@ class _CreatePlanDialogState extends State<CreatePlanDialog> {
         ElevatedButton(
           onPressed: () {
             if (_formKey.currentState!.validate()) {
-              final newPlan = {
-                'name': _nameController.text,
-                'description': _descriptionController.text,
-                'price': double.parse(_priceController.text),
-                'billingCycle': _billingCycle,
-                'features': List<String>.from(_features),
-                'limitations': List<String>.from(_limitations),
-              };
-              widget.onPlanCreated(newPlan);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Plan created successfully')),
+              // FIXED: Creating SubscriptionPlan object, not Map
+              final newPlan = SubscriptionPlan(
+                planCode: _planCodeController.text,
+                name: _nameController.text,
+                description: _descriptionController.text,
+                price: double.parse(_priceController.text),
+                billingCycle: _billingCycle,
+                maxStudents: _maxStudentsController.text.isNotEmpty
+                    ? int.parse(_maxStudentsController.text)
+                    : null,
+                maxBuses: _maxBusesController.text.isNotEmpty
+                    ? int.parse(_maxBusesController.text)
+                    : null,
+                features: _features.isNotEmpty ? _features : null,
+                limitations: _limitations.isNotEmpty ? _limitations : null,
+                isActive: true,
+                createdAt: DateTime.now(),
               );
+              widget.onPlanCreated(newPlan); // Pass SubscriptionPlan
             }
           },
           child: const Text('Create Plan'),
         ),
       ],
     );
+  }
+
+  @override
+  void dispose() {
+    _planCodeController.dispose();
+    _nameController.dispose();
+    _descriptionController.dispose();
+    _priceController.dispose();
+    _maxStudentsController.dispose();
+    _maxBusesController.dispose();
+    _featureKeyController.dispose();
+    _featureValueController.dispose();
+    _limitationKeyController.dispose();
+    _limitationValueController.dispose();
+    super.dispose();
   }
 }
 
@@ -1681,10 +1866,9 @@ class _EditSubscriptionDialogState extends State<EditSubscriptionDialog> {
   }
 }
 
-// Dialog for editing plan
 class EditPlanDialog extends StatefulWidget {
-  final Map<String, dynamic> plan;
-  final Function(Map<String, dynamic>) onSave;
+  final SubscriptionPlan plan;
+  final Function(SubscriptionPlan) onSave;
 
   const EditPlanDialog({
     super.key,
@@ -1697,28 +1881,40 @@ class EditPlanDialog extends StatefulWidget {
 }
 
 class _EditPlanDialogState extends State<EditPlanDialog> {
+  late TextEditingController _planCodeController;
   late TextEditingController _nameController;
   late TextEditingController _descriptionController;
   late TextEditingController _priceController;
+  late TextEditingController _maxStudentsController;
+  late TextEditingController _maxBusesController;
+  late TextEditingController _featureKeyController;
+  late TextEditingController _featureValueController;
+  late TextEditingController _limitationKeyController;
+  late TextEditingController _limitationValueController;
+
   late String _billingCycle;
-  final List<String> _features = [];
-  final List<String> _limitations = [];
+  late Map<String, dynamic> _features;
+  late Map<String, dynamic> _limitations;
 
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.plan['name'] as String);
-    _descriptionController = TextEditingController(text: widget.plan['description'] as String);
-    _priceController = TextEditingController(text: (widget.plan['price'] as double).toStringAsFixed(2));
-    _billingCycle = widget.plan['billingCycle'] as String;
+    _planCodeController = TextEditingController(text: widget.plan.planCode);
+    _nameController = TextEditingController(text: widget.plan.name);
+    _descriptionController = TextEditingController(text: widget.plan.description);
+    _priceController = TextEditingController(text: widget.plan.price.toStringAsFixed(2));
+    _maxStudentsController = TextEditingController(
+        text: widget.plan.maxStudents?.toString() ?? '');
+    _maxBusesController = TextEditingController(
+        text: widget.plan.maxBuses?.toString() ?? '');
+    _billingCycle = widget.plan.billingCycle;
+    _features = Map<String, dynamic>.from(widget.plan.features ?? {});
+    _limitations = Map<String, dynamic>.from(widget.plan.limitations ?? {});
 
-    // Initialize features and limitations
-    if (widget.plan['features'] is List) {
-      _features.addAll((widget.plan['features'] as List<dynamic>).map((e) => e.toString()));
-    }
-    if (widget.plan['limitations'] is List) {
-      _limitations.addAll((widget.plan['limitations'] as List<dynamic>).map((e) => e.toString()));
-    }
+    _featureKeyController = TextEditingController();
+    _featureValueController = TextEditingController();
+    _limitationKeyController = TextEditingController();
+    _limitationValueController = TextEditingController();
   }
 
   @override
@@ -1729,6 +1925,14 @@ class _EditPlanDialogState extends State<EditPlanDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            TextField(
+              controller: _planCodeController,
+              decoration: const InputDecoration(
+                labelText: 'Plan Code',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
             TextField(
               controller: _nameController,
               decoration: const InputDecoration(
@@ -1756,7 +1960,7 @@ class _EditPlanDialogState extends State<EditPlanDialog> {
                       border: OutlineInputBorder(),
                       prefixText: '\$',
                     ),
-                    keyboardType: TextInputType.number,
+                    keyboardType: TextInputType.numberWithOptions(decimal: true),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1769,15 +1973,15 @@ class _EditPlanDialogState extends State<EditPlanDialog> {
                     ),
                     items: const [
                       DropdownMenuItem<String>(
-                        value: 'Monthly',
+                        value: 'monthly',
                         child: Text('Monthly'),
                       ),
                       DropdownMenuItem<String>(
-                        value: 'Quarterly',
+                        value: 'quarterly',
                         child: Text('Quarterly'),
                       ),
                       DropdownMenuItem<String>(
-                        value: 'Annual',
+                        value: 'annual',
                         child: Text('Annual'),
                       ),
                     ],
@@ -1790,6 +1994,32 @@ class _EditPlanDialogState extends State<EditPlanDialog> {
                 ),
               ],
             ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _maxStudentsController,
+                    decoration: const InputDecoration(
+                      labelText: 'Max Students',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _maxBusesController,
+                    decoration: const InputDecoration(
+                      labelText: 'Max Buses',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 16),
 
             // Features
@@ -1798,69 +2028,52 @@ class _EditPlanDialogState extends State<EditPlanDialog> {
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _features.map((feature) => Chip(
-                label: Text(feature),
-                onDeleted: () {
-                  setState(() {
-                    _features.remove(feature);
-                  });
-                },
-              )).toList(),
-            ),
+            if (_features.isNotEmpty)
+              ..._features.entries.map((entry) => ListTile(
+                title: Text('${entry.key}: ${entry.value}'),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete, size: 16),
+                  onPressed: () {
+                    setState(() {
+                      _features.remove(entry.key);
+                    });
+                  },
+                ),
+              )),
             const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
                   child: TextField(
+                    controller: _featureKeyController,
                     decoration: const InputDecoration(
-                      hintText: 'Add new feature...',
+                      hintText: 'Add feature key...',
                       border: OutlineInputBorder(),
                     ),
-                    onSubmitted: (value) {
-                      if (value.isNotEmpty) {
-                        setState(() {
-                          _features.add(value);
-                        });
-                      }
-                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _featureValueController,
+                    decoration: const InputDecoration(
+                      hintText: 'Add feature value...',
+                      border: OutlineInputBorder(),
+                    ),
                   ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.add),
                   onPressed: () {
-                    final controller = TextEditingController();
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Add Feature'),
-                        content: TextField(
-                          controller: controller,
-                          decoration: const InputDecoration(
-                            hintText: 'Enter feature...',
-                          ),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('Cancel'),
-                          ),
-                          ElevatedButton(
-                            onPressed: () {
-                              if (controller.text.isNotEmpty) {
-                                setState(() {
-                                  _features.add(controller.text);
-                                });
-                                Navigator.pop(context);
-                              }
-                            },
-                            child: const Text('Add'),
-                          ),
-                        ],
-                      ),
-                    );
+                    if (_featureKeyController.text.isNotEmpty &&
+                        _featureValueController.text.isNotEmpty) {
+                      setState(() {
+                        _features[_featureKeyController.text] =
+                            _featureValueController.text;
+                        _featureKeyController.clear();
+                        _featureValueController.clear();
+                      });
+                    }
                   },
                 ),
               ],
@@ -1874,69 +2087,52 @@ class _EditPlanDialogState extends State<EditPlanDialog> {
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _limitations.map((limitation) => Chip(
-                label: Text(limitation),
-                onDeleted: () {
-                  setState(() {
-                    _limitations.remove(limitation);
-                  });
-                },
-              )).toList(),
-            ),
+            if (_limitations.isNotEmpty)
+              ..._limitations.entries.map((entry) => ListTile(
+                title: Text('${entry.key}: ${entry.value}'),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete, size: 16),
+                  onPressed: () {
+                    setState(() {
+                      _limitations.remove(entry.key);
+                    });
+                  },
+                ),
+              )),
             const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
                   child: TextField(
+                    controller: _limitationKeyController,
                     decoration: const InputDecoration(
-                      hintText: 'Add new limitation...',
+                      hintText: 'Add limitation key...',
                       border: OutlineInputBorder(),
                     ),
-                    onSubmitted: (value) {
-                      if (value.isNotEmpty) {
-                        setState(() {
-                          _limitations.add(value);
-                        });
-                      }
-                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _limitationValueController,
+                    decoration: const InputDecoration(
+                      hintText: 'Add limitation value...',
+                      border: OutlineInputBorder(),
+                    ),
                   ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.add),
                   onPressed: () {
-                    final controller = TextEditingController();
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Add Limitation'),
-                        content: TextField(
-                          controller: controller,
-                          decoration: const InputDecoration(
-                            hintText: 'Enter limitation...',
-                          ),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('Cancel'),
-                          ),
-                          ElevatedButton(
-                            onPressed: () {
-                              if (controller.text.isNotEmpty) {
-                                setState(() {
-                                  _limitations.add(controller.text);
-                                });
-                                Navigator.pop(context);
-                              }
-                            },
-                            child: const Text('Add'),
-                          ),
-                        ],
-                      ),
-                    );
+                    if (_limitationKeyController.text.isNotEmpty &&
+                        _limitationValueController.text.isNotEmpty) {
+                      setState(() {
+                        _limitations[_limitationKeyController.text] =
+                            _limitationValueController.text;
+                        _limitationKeyController.clear();
+                        _limitationValueController.clear();
+                      });
+                    }
                   },
                 ),
               ],
@@ -1951,19 +2147,23 @@ class _EditPlanDialogState extends State<EditPlanDialog> {
         ),
         ElevatedButton(
           onPressed: () {
-            final updatedPlan = Map<String, dynamic>.from(widget.plan);
-            updatedPlan['name'] = _nameController.text;
-            updatedPlan['description'] = _descriptionController.text;
-            updatedPlan['price'] = double.tryParse(_priceController.text) ?? widget.plan['price'];
-            updatedPlan['billingCycle'] = _billingCycle;
-            updatedPlan['features'] = List<String>.from(_features);
-            updatedPlan['limitations'] = List<String>.from(_limitations);
-
-            widget.onSave(updatedPlan);
-            Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Plan updated successfully')),
+            // FIXED: Using copyWith() instead of creating a Map
+            final updatedPlan = widget.plan.copyWith(
+              planCode: _planCodeController.text,
+              name: _nameController.text,
+              description: _descriptionController.text,
+              price: double.tryParse(_priceController.text) ?? widget.plan.price,
+              billingCycle: _billingCycle,
+              maxStudents: _maxStudentsController.text.isNotEmpty
+                  ? int.tryParse(_maxStudentsController.text)
+                  : null,
+              maxBuses: _maxBusesController.text.isNotEmpty
+                  ? int.tryParse(_maxBusesController.text)
+                  : null,
+              features: _features.isNotEmpty ? _features : null,
+              limitations: _limitations.isNotEmpty ? _limitations : null,
             );
+            widget.onSave(updatedPlan);
           },
           child: const Text('Save Changes'),
         ),
@@ -1973,16 +2173,23 @@ class _EditPlanDialogState extends State<EditPlanDialog> {
 
   @override
   void dispose() {
+    _planCodeController.dispose();
     _nameController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
+    _maxStudentsController.dispose();
+    _maxBusesController.dispose();
+    _featureKeyController.dispose();
+    _featureValueController.dispose();
+    _limitationKeyController.dispose();
+    _limitationValueController.dispose();
     super.dispose();
   }
 }
 
 // Dialog for assigning plan to schools
 class AssignPlanDialog extends StatefulWidget {
-  final Map<String, dynamic> plan;
+  final SubscriptionPlan plan;
 
   const AssignPlanDialog({super.key, required this.plan});
 
@@ -2010,13 +2217,13 @@ class _AssignPlanDialogState extends State<AssignPlanDialog> {
   @override
   void initState() {
     super.initState();
-    _customPriceController.text = (widget.plan['price'] as double).toStringAsFixed(2);
+    _customPriceController.text = (widget.plan.price).toStringAsFixed(2);
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Assign ${widget.plan['name']} Plan'),
+      title: Text('Assign ${widget.plan.name} Plan'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -2030,7 +2237,7 @@ class _AssignPlanDialogState extends State<AssignPlanDialog> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      widget.plan['name'] as String,
+                      widget.plan.name,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -2038,7 +2245,7 @@ class _AssignPlanDialogState extends State<AssignPlanDialog> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      widget.plan['description'] as String,
+                      widget.plan.description,
                       style: const TextStyle(fontSize: 12, color: Colors.grey),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -2054,7 +2261,7 @@ class _AssignPlanDialogState extends State<AssignPlanDialog> {
                           ),
                         ),
                         Text(
-                          '\$${(widget.plan['price'] as double).toStringAsFixed(2)}/${widget.plan['billingCycle']}',
+                          '\$${(widget.plan.price).toStringAsFixed(2)}/${widget.plan.billingCycle}',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                           ),
@@ -2222,14 +2429,14 @@ class _AssignPlanDialogState extends State<AssignPlanDialog> {
 
   void _assignPlanToSchools() {
     final price = _useCustomPrice
-        ? double.tryParse(_customPriceController.text) ?? widget.plan['price'] as double
-        : widget.plan['price'] as double;
+        ? double.tryParse(_customPriceController.text) ?? widget.plan.price
+        : widget.plan.price;
 
     // Here you would implement the actual assignment logic
     // For now, we'll just print the details
     print('Assigning plan to schools: $_selectedSchools');
     print('Price: \$$price per $_billingCycle');
-    print('Plan: ${widget.plan['name']}');
+    print('Plan: ${widget.plan.name}');
   }
 
   @override
@@ -2659,4 +2866,3 @@ class InvoiceDetailsDialog extends StatelessWidget {
 }
 // Other dialog classes (EditPlanDialog, AssignPlanDialog, InvoiceDetailsDialog)
 // should be similarly updated with proper type annotations
-

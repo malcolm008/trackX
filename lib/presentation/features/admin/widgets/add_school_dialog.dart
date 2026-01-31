@@ -217,18 +217,23 @@ class _AddSchoolDialogState extends State<AddSchoolDialog> {
 
   Future<void> _saveSchool() async {
     try {
+      int parseIntField(TextEditingController controller) =>
+          int.tryParse(controller.text.trim()) ?? 0;
+
       final school = School(
         id: widget.school?.id,
-        schoolCode: widget.school?.schoolCode ?? 'SCH-${DateTime.now().millisecondsSinceEpoch}',
+        schoolCode: widget.school?.schoolCode ??
+            'SCH-${DateTime.now().millisecondsSinceEpoch}',
         name: _nameController.text,
         email: _emailController.text,
         phone: _phoneController.text.isNotEmpty ? _phoneController.text : null,
         address: _addressController.text.isNotEmpty ? _addressController.text : null,
         city: _cityController.text.isNotEmpty ? _cityController.text : null,
         country: _countryController.text.isNotEmpty ? _countryController.text : null,
-        contactPerson: _contactPersonController.text.isNotEmpty ? _contactPersonController.text : null,
-        totalStudents: int.tryParse(_studentsController.text) ?? 0,
-        totalBuses: int.tryParse(_busesController.text) ?? 0,
+        contactPerson:
+        _contactPersonController.text.isNotEmpty ? _contactPersonController.text : null,
+        totalStudents: parseIntField(_studentsController),
+        totalBuses: parseIntField(_busesController),
         status: _status,
         createdAt: widget.school?.createdAt ?? DateTime.now(),
         updatedAt: DateTime.now(),
@@ -240,16 +245,11 @@ class _AddSchoolDialogState extends State<AddSchoolDialog> {
         await _repository.updateSchool(school.id!, school);
       }
 
-      if (mounted) {
-        Navigator.pop(context, true);
-      }
+      if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
     }

@@ -39,6 +39,11 @@ class SchoolRepository {
   Future<School> createSchool(School school) async {
     try {
       final response = await _apiService.createSchool(school.toJson());
+
+      if (response.body.isEmpty) {
+        return school;
+      }
+
       final data = json.decode(response.body);
       return School.fromJson(data);
     } catch (e) {
@@ -47,9 +52,15 @@ class SchoolRepository {
     }
   }
 
+
   Future<School> updateSchool(int id, School school) async {
     try {
       final response = await _apiService.updateSchool(id, school.toJson());
+
+      if (!response.headers['content-type']!.contains('application/json')) {
+        throw Exception('Server did not return JSON');
+      }
+
       final data = json.decode(response.body);
       return School.fromJson(data);
     } catch (e) {
@@ -57,6 +68,7 @@ class SchoolRepository {
       rethrow;
     }
   }
+
 
   Future<void> deleteSchool(int id) async {
     try {
@@ -90,7 +102,7 @@ class SchoolRepository {
         'new_this_month': newThisMonth,
         'total_students': totalStudents,
         'total_buses': totalBuses,
-        'revenue_per_month': 12450.0, // This should come from subscriptions
+        'revenue_per_month': 12450.0,
       };
     } catch (e) {
       print('Error getting school stats: $e');

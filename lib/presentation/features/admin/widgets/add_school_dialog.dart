@@ -1,6 +1,8 @@
+import 'package:bustracker_007/data/models/web/school_subscription.dart';
 import 'package:flutter/material.dart';
 import 'package:bustracker_007/data/models/web/school.dart';
 import 'package:bustracker_007/core/repositories/school_repository.dart';
+import 'package:bustracker_007/core/services/api_service.dart';
 
 class AddSchoolDialog extends StatefulWidget {
   final School? school;
@@ -14,6 +16,11 @@ class AddSchoolDialog extends StatefulWidget {
 class _AddSchoolDialogState extends State<AddSchoolDialog> {
   final _formKey = GlobalKey<FormState>();
   final SchoolRepository _repository = SchoolRepository();
+  final ApiService _apiService = ApiService();
+
+  List<SchoolSubscription> _subscriptions = [];
+  SchoolSubscription? _selectedSubscription;
+  bool _isLoadingSubscriptions = false;
 
   late TextEditingController _nameController;
   late TextEditingController _emailController;
@@ -45,6 +52,26 @@ class _AddSchoolDialogState extends State<AddSchoolDialog> {
 
     if (school != null) {
       _status = school.status;
+    }
+
+    _loadSubscriptions();
+  }
+
+  Future<void> _loadSubscriptions() async {
+    setState(() {
+      _isLoadingSubscriptions = true;
+    });
+    try {
+      final subscriptions = await _apiService.getSubscriptions();
+      setState(() {
+        _subscriptions = subscriptions;
+      });
+    } catch (e) {
+      print('Error loading subscriptions: $e');
+    } finally {
+      setState(() {
+        _isLoadingSubscriptions = false;
+      });
     }
   }
 
@@ -78,6 +105,12 @@ class _AddSchoolDialogState extends State<AddSchoolDialog> {
                   ],
                 ),
                 const SizedBox(height: 24),
+
+                if (widget.school == null) ...[
+                  _buildSubscriptionDropdown(),
+                  const SizedBox(height: 16),
+                ],
+
                 GridView.count(
                   shrinkWrap: true,
                   crossAxisCount: 2,
@@ -174,6 +207,7 @@ class _AddSchoolDialogState extends State<AddSchoolDialog> {
                         border: OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.number,
+                      readOnly: widget.school == null,
                     ),
                     TextFormField(
                       controller: _busesController,
@@ -182,6 +216,7 @@ class _AddSchoolDialogState extends State<AddSchoolDialog> {
                         border: OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.number,
+                      readOnly: widget.school == null,
                     ),
                   ],
                 ),
@@ -212,6 +247,75 @@ class _AddSchoolDialogState extends State<AddSchoolDialog> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSubscriptionDropdown() {
+    if (_isLoadingSubscriptions) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_subscriptions.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.orange[50],
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.orange),
+        ),
+        child: const Text(
+          'No existiing subscriptions found. Please create a subscription first.',
+          style: TextStyle(color: Colors.orange),
+        ),
+      );
+    }
+
+    return DropdownButtonFormField<SchoolSubscription>(
+      decoration: const InputDecoration(
+        labelText: 'Copy from Existing Subscription *',
+        border: OutlineInputBorder(),
+        prefixIcon: Icon(Icons.subscriptions),
+        helperText: 'Select a subscription',
+      ),
+      value: _selectedSubscription,
+      items: _subscriptions.map((subscription) {
+        final school = subscription.school;
+        return DropdownMenuItem<SchoolSubscription>(
+          value: subscription,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(school?.name ?? 'Unknown School'),
+              Text(
+                'Subscription ID: ${subscription.subscriptionCode}',
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+      onChanged: (SchoolSubscription? subscription) {
+        setState(() {
+          _selectedSubscription = subscription;
+          if (subscription != null && subscription.school != null) {
+            final school = subscription.school!;
+
+            _nameController.text = school.name;
+            _emailController.text = school.email;
+            _phoneController.text = school.phone ?? '';
+            _addressController.text = school.address ?? '';
+            _studentsController.text = school.totalStudents.toString();
+            _busesController.text = school.totalBuses.toString();
+            _status = school.status;
+          }
+        });
+      },
+      validator: widget.school == null ? (value) {
+        if (value == null) {
+          return 'Please select a subscription to copy data from';
+        }
+        return null;
+      } : null,
     );
   }
 

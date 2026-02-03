@@ -1,6 +1,8 @@
 import 'package:bustracker_007/core/services/api_service.dart';
+import 'package:bustracker_007/data/models/web/school_subscription.dart';
 import 'package:flutter/material.dart';
 import '../../../../data/models/web/subscription_plan.dart';
+import '../../../../data/models/web/school.dart';
 
 class BillingScreen extends StatefulWidget {
   const BillingScreen({super.key});
@@ -16,87 +18,8 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
 
   // Mock data
   final ApiService _apiService = ApiService();
-  final List<Map<String, dynamic>> _subscriptions = [
-    {
-      'id': '1',
-      'schoolId': 'SCH001',
-      'schoolName': 'Greenwood High',
-      'plan': 'Enterprise',
-      'students': 500,
-      'price': 499.99,
-      'billingCycle': 'Monthly',
-      'status': 'active',
-      'startDate': '2024-01-01',
-      'renewalDate': '2024-02-01',
-      'features': {
-        'Live Tracking': true,
-        'GPS Accuracy': 'High',
-        'Notifications': 'Unlimited',
-        'Data Retention': '1 Year',
-        'Support': '24/7 Priority',
-      },
-    },
-    {
-      'id': '2',
-      'schoolId': 'SCH002',
-      'schoolName': 'Maplewood Academy',
-      'plan': 'Pro',
-      'students': 250,
-      'price': 299.99,
-      'billingCycle': 'Quarterly',
-      'status': 'active',
-      'startDate': '2023-12-01',
-      'renewalDate': '2024-03-01',
-      'features': {
-        'Live Tracking': true,
-        'GPS Accuracy': 'Medium',
-        'Notifications': '1000/month',
-        'Data Retention': '6 Months',
-        'Support': 'Business Hours',
-      },
-    },
-    {
-      'id': '3',
-      'schoolId': 'SCH003',
-      'schoolName': 'Riverside School',
-      'plan': 'Basic',
-      'students': 100,
-      'price': 149.99,
-      'billingCycle': 'Monthly',
-      'status': 'pending',
-      'startDate': '2024-01-15',
-      'renewalDate': '2024-02-15',
-      'features': {
-        'Live Tracking': true,
-        'GPS Accuracy': 'Basic',
-        'Notifications': '500/month',
-        'Data Retention': '3 Months',
-        'Support': 'Email Only',
-      },
-    },
-    {
-      'id': '4',
-      'schoolId': 'SCH004',
-      'schoolName': 'Sunrise Elementary',
-      'plan': 'Enterprise',
-      'students': 400,
-      'price': 449.99,
-      'billingCycle': 'Annual',
-      'status': 'cancelled',
-      'startDate': '2023-01-01',
-      'renewalDate': '2024-01-01',
-      'features': {
-        'Live Tracking': true,
-        'GPS Accuracy': 'High',
-        'Notifications': 'Unlimited',
-        'Data Retention': '2 Years',
-        'Support': '24/7 Priority',
-      },
-    },
-  ];
-
+  List<SchoolSubscription> _subscriptions = [];
   List<SubscriptionPlan> _availablePlans = [];
-
   final List<Map<String, dynamic>> _invoices = [
     {
       'id': 'INV-2024-001',
@@ -138,6 +61,7 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _loadPlans();
+    _loadSubscriptions();
   }
 
   Future<void> _loadPlans() async {
@@ -157,6 +81,20 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
         _errorMessage = 'Failed to load plans: $e';
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _loadSubscriptions() async {
+    try {
+      final filters = _selectedFilter != 'all'
+          ? {'status': _selectedFilter}
+          : null;
+      final subscriptions = await _apiService.getSubscriptions(filters: filters);
+      setState(() {
+        _subscriptions = subscriptions;
+      });
+    } catch (e) {
+      throw Exception('Failed to load subscriptions: $e');
     }
   }
 
@@ -223,18 +161,19 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
   }
 
   Widget _buildStatsHeader(bool isDesktop, bool isTablet) {
+    // Calculate stats from SchoolSubscription objects
     final totalRevenue = _subscriptions
-        .where((s) => s['status'] == 'active')
-        .fold(0.0, (sum, s) => sum + (s['price'] as double));
+        .where((s) => s.status == 'active')
+        .fold(0.0, (sum, s) => sum + s.amount); // Use s.amount
 
     final activeSubscriptions = _subscriptions
-        .where((s) => s['status'] == 'active')
+        .where((s) => s.status == 'active')
         .length;
 
     final upcomingRenewals = _subscriptions
         .where((s) {
-      final renewalDate = DateTime.parse(s['renewalDate'] as String);
-      return renewalDate.difference(DateTime.now()).inDays <= 7;
+      // Use s.endDate directly
+      return s.endDate.difference(DateTime.now()).inDays <= 7;
     })
         .length;
 
@@ -322,6 +261,14 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
   }
 
   Widget _buildSubscriptionsTab(bool isDesktop, bool isTablet) {
+    final filteredSubscriptions = _subscriptions.where((sub) {
+      final schoolName = sub.school?.name?.toLowerCase() ?? '';
+      final searchQuery = _searchController.text.toLowerCase();
+      final statusMatch = _selectedFilter == 'all' || sub.status == _selectedFilter;
+
+      return (schoolName.contains(searchQuery) || searchQuery.isEmpty) && statusMatch;
+    }).toList();
+
     return Padding(
       padding: EdgeInsets.symmetric(
         horizontal: isDesktop ? 0 : 8,
@@ -472,10 +419,21 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
   }
 
   Widget _buildSubscriptionCard(
-      Map<String, dynamic> subscription,
+      SchoolSubscription subscription,
       bool isDesktop,
       bool isTablet,
       ) {
+    final schoolName = subscription.school?.name ?? 'Unknown School';
+    final schoolId = subscription.school?.id?.toString() ?? 'N/A';
+    final planName = subscription.plan?.name ?? 'Unknown Plan';
+    final students = subscription.school?.totalStudents ?? 0;
+    final buses = subscription.school?.totalBuses ?? 0;
+    final price = subscription.amount;
+    final billingCycle = subscription.plan?.billingCycle ?? 'Monthly';
+    final startDate = subscription.startDate.toString().split(' ')[0];
+    final renewDate = subscription.endDate.toString().split(' ')[0];
+    final features = subscription.plan?.features ?? {};
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -491,7 +449,7 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        subscription['schoolName'] as String,
+                        schoolName,
                         style: TextStyle(
                           fontSize: isDesktop ? 18 : 16,
                           fontWeight: FontWeight.bold,
@@ -500,7 +458,7 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
-                        'ID: ${subscription['schoolId']}',
+                        'ID: $schoolId',
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
@@ -515,11 +473,11 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: _getStatusColor(subscription['status'] as String),
+                    color: _getStatusColor(subscription.status),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
-                    (subscription['status'] as String).toUpperCase(),
+                    subscription.status.toUpperCase(),
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -535,13 +493,15 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
             if (isDesktop)
               Row(
                 children: [
-                  _buildInfoItem('Plan', subscription['plan'] as String, isDesktop),
+                  _buildInfoItem('Plan', planName, isDesktop),
                   const SizedBox(width: 24),
-                  _buildInfoItem('Price', '\$${(subscription['price'] as double).toStringAsFixed(2)}', isDesktop),
+                  _buildInfoItem('Price', '\$${price.toStringAsFixed(2)}', isDesktop),
                   const SizedBox(width: 24),
-                  _buildInfoItem('Cycle', subscription['billingCycle'] as String, isDesktop),
+                  _buildInfoItem('Cycle', billingCycle, isDesktop),
                   const SizedBox(width: 24),
-                  _buildInfoItem('Students', subscription['students'].toString(), isDesktop),
+                  _buildInfoItem('Students', students.toString(), isDesktop),
+                  const SizedBox(width: 24),
+                  _buildInfoItem('Buses', buses.toString(), isDesktop),
                 ],
               )
             else
@@ -549,20 +509,21 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
                 spacing: 16,
                 runSpacing: 8,
                 children: [
-                  _buildInfoItem('Plan', subscription['plan'] as String, isDesktop),
-                  _buildInfoItem('Price', '\$${(subscription['price'] as double).toStringAsFixed(2)}', isDesktop),
-                  _buildInfoItem('Cycle', subscription['billingCycle'] as String, isDesktop),
-                  _buildInfoItem('Students', subscription['students'].toString(), isDesktop),
+                  _buildInfoItem('Plan', planName, isDesktop),
+                  _buildInfoItem('Price', '\$${price.toStringAsFixed(2)}', isDesktop),
+                  _buildInfoItem('Cycle', billingCycle, isDesktop),
+                  _buildInfoItem('Students', students.toString(), isDesktop),
+                  _buildInfoItem('Buses', buses.toString(), isDesktop),
                 ],
               ),
             const SizedBox(height: 12),
 
             // Features
-            if (subscription['features'] is Map && (subscription['features'] as Map).isNotEmpty)
+            if (features.isNotEmpty)
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: (subscription['features'] as Map<String, dynamic>).entries.map((entry) {
+                children: features.entries.map((entry) {
                   return Chip(
                     label: Text(
                       '${entry.key}: ${entry.value}',
@@ -582,14 +543,14 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Start: ${subscription['startDate']}',
+                        'Start: $startDate',
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
                         ),
                       ),
                       Text(
-                        'Renewal: ${subscription['renewalDate']}',
+                        'Renewal: $renewDate',
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
@@ -1144,82 +1105,14 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
   void _showCreateSubscriptionDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Create New Subscription'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: 'School Name',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: 'School ID',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  labelText: 'Plan',
-                  border: OutlineInputBorder(),
-                ),
-                items: _availablePlans.map<DropdownMenuItem<String>>((plan) {
-                  final planName = plan.name;
-                  final planPrice = plan.price;
-                  return DropdownMenuItem<String>(
-                    value: planName,
-                    child: Text('$planName - \$$planPrice'),
-                  );
-                }).toList(),
-                onChanged: (String? value) {},
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Number of Students',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _subscriptions.add({
-                  'id': '${_subscriptions.length + 1}',
-                  'schoolId': 'SCH00${_subscriptions.length + 1}',
-                  'schoolName': 'New School ${_subscriptions.length + 1}',
-                  'plan': 'Basic',
-                  'students': 100,
-                  'price': 149.99,
-                  'billingCycle': 'Monthly',
-                  'status': 'active',
-                  'startDate': '2024-01-01',
-                  'renewalDate': '2024-02-01',
-                  'features': {},
-                });
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Subscription created successfully')),
-              );
-            },
-            child: const Text('Create'),
-          ),
-        ],
+      builder: (context) => CreateSubscriptionDialog(
+        apiService: _apiService,
+        onSubscriptionCreated: (newSubscription) {
+          setState(() {
+            _subscriptions.add(newSubscription);
+          });
+          _loadSubscriptions();
+        },
       ),
     );
   }
@@ -1248,19 +1141,52 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
     );
   }
 
-  void _editSubscription(Map<String, dynamic> subscription) {
+  void _editSubscription(SchoolSubscription subscription) {
     showDialog(
       context: context,
       builder: (context) => EditSubscriptionDialog(
         subscription: subscription,
         onSave: (updatedSubscription) {
           setState(() {
-            final index = _subscriptions.indexWhere((s) => s['id'] == subscription['id']);
+            // Use SchoolSubscription properties, not Map keys
+            final index = _subscriptions.indexWhere((s) => s.id == subscription.id);
             if (index != -1) {
               _subscriptions[index] = updatedSubscription;
             }
           });
         },
+      ),
+    );
+  }
+
+  void _deleteSubscription(SchoolSubscription subscription) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Subscription'),
+        content: Text('Are you sure you want to delete subscription for ${subscription.school?.name ?? "this school"}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _subscriptions.removeWhere((s) => s.id == subscription.id);
+              });
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Subscription for ${subscription.school?.name ?? "this school"} deleted'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
   }
@@ -1336,39 +1262,7 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
     );
   }
 
-  void _deleteSubscription(Map<String, dynamic> subscription) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Subscription'),
-        content: Text('Are you sure you want to delete subscription for ${subscription['schoolName']}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _subscriptions.removeWhere((s) => s['id'] == subscription['id']);
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Subscription for ${subscription['schoolName']} deleted'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _viewInvoice(Map<String, dynamic> subscription) {
+  void _viewInvoice(SchoolSubscription subscription) {
     // Navigate to invoice details
   }
 
@@ -1404,9 +1298,6 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
     );
   }
 }
-
-// Dialog classes (CreatePlanDialog, EditSubscriptionDialog, etc.) remain the same
-// but need to be updated with proper type annotations
 
 class CreatePlanDialog extends StatefulWidget {
   final Function(SubscriptionPlan) onPlanCreated; // Expects SubscriptionPlan
@@ -1732,9 +1623,438 @@ class _CreatePlanDialogState extends State<CreatePlanDialog> {
   }
 }
 
+class CreateSubscriptionDialog extends StatefulWidget {
+  final ApiService apiService;
+  final Function(SchoolSubscription) onSubscriptionCreated;
+
+  const CreateSubscriptionDialog({
+    super.key,
+    required this.apiService,
+    required this.onSubscriptionCreated,
+  });
+
+  @override
+  State<CreateSubscriptionDialog> createState() => _CreateSubscriptionDialogState();
+}
+
+class _CreateSubscriptionDialogState extends State<CreateSubscriptionDialog> {
+  final _formKey = GlobalKey<FormState>();
+
+  // Text controllers for direct input
+  final TextEditingController _schoolNameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _studentsController = TextEditingController();
+  final TextEditingController _busesController = TextEditingController();
+  final TextEditingController _startDateController = TextEditingController();
+  final TextEditingController _endDateController = TextEditingController();
+
+  // Plan selection
+  SubscriptionPlan? _selectedPlan;
+  DateTime _startDate = DateTime.now();
+  DateTime _endDate = DateTime.now().add(const Duration(days: 30));
+  String _status = 'active';
+  bool _autoRenew = true;
+
+  // Lists for available data
+  List<SubscriptionPlan> _availablePlans = [];
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlans();
+    _startDateController.text = _formatDate(_startDate);
+    _endDateController.text = _formatDate(_endDate);
+  }
+
+  Future<void> _loadPlans() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final plans = await widget.apiService.getAllPlans();
+      setState(() {
+        _availablePlans = plans;
+      });
+    } catch (e) {
+      print('Error loading plans: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Create New Subscription'),
+      content: SingleChildScrollView(
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // School Name - Direct Text Input
+              TextFormField(
+                controller: _schoolNameController,
+                decoration: const InputDecoration(
+                  labelText: 'School Name *',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.school),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'School name is required';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Plan Selection
+              DropdownButtonFormField<SubscriptionPlan>(
+                decoration: const InputDecoration(
+                  contentPadding: EdgeInsets.symmetric(vertical: 22),
+                  labelText: 'Select Plan *',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.next_plan),
+                ),
+                value: _selectedPlan,
+                items: _availablePlans.map((plan) {
+                  return DropdownMenuItem<SubscriptionPlan>(
+                    value: plan,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(plan.name, style: const TextStyle(fontSize: 12),),
+                        Text(
+                          '\$${plan.price}/${plan.billingCycle}',
+                          style: const TextStyle(fontSize: 8, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                onChanged: (SubscriptionPlan? plan) {
+                  setState(() {
+                    _selectedPlan = plan;
+                  });
+                },
+                validator: (value) {
+                  if (value == null) return 'Please select a plan';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Contact Information
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _emailController,
+                      decoration: const InputDecoration(
+                        labelText: 'Email',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.email),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _phoneController,
+                      decoration: const InputDecoration(
+                        labelText: 'Phone',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.phone),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Address
+              TextFormField(
+                controller: _addressController,
+                decoration: const InputDecoration(
+                  labelText: 'Address',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.location_on),
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 16),
+
+              // Student and Bus Counts
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _studentsController,
+                      decoration: const InputDecoration(
+                        labelText: 'Number of Students *',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.people),
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Student count is required';
+                        }
+                        if (int.tryParse(value) == null) {
+                          return 'Enter a valid number';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _busesController,
+                      decoration: const InputDecoration(
+                        labelText: 'Number of Buses *',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.directions_bus),
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Bus count is required';
+                        }
+                        if (int.tryParse(value) == null) {
+                          return 'Enter a valid number';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Dates
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _startDateController,
+                      decoration: const InputDecoration(
+                        labelText: 'Start Date',
+                        border: OutlineInputBorder(),
+                        suffixIcon: Icon(Icons.calendar_today),
+                      ),
+                      readOnly: true,
+                      onTap: () async {
+                        final date = await showDatePicker(
+                          context: context,
+                          initialDate: _startDate,
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+                        );
+                        if (date != null) {
+                          setState(() {
+                            _startDate = date;
+                            _startDateController.text = _formatDate(date);
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _endDateController,
+                      decoration: const InputDecoration(
+                        labelText: 'End Date',
+                        border: OutlineInputBorder(),
+                        suffixIcon: Icon(Icons.calendar_today),
+                      ),
+                      readOnly: true,
+                      onTap: () async {
+                        final date = await showDatePicker(
+                          context: context,
+                          initialDate: _endDate,
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+                        );
+                        if (date != null) {
+                          setState(() {
+                            _endDate = date;
+                            _endDateController.text = _formatDate(date);
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Status and Auto-renew
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      value: _status,
+                      decoration: const InputDecoration(
+                        labelText: 'Status',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'active', child: Text('Active')),
+                        DropdownMenuItem(value: 'pending', child: Text('Pending')),
+                        DropdownMenuItem(value: 'trial', child: Text('Trial')),
+                      ],
+                      onChanged: (String? value) {
+                        setState(() {
+                          _status = value ?? 'active';
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: SwitchListTile(
+                      title: const Text('Auto Renew'),
+                      value: _autoRenew,
+                      onChanged: (value) {
+                        setState(() {
+                          _autoRenew = value;
+                        });
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _createSubscription,
+          child: const Text('Create'),
+        ),
+      ],
+    );
+  }
+
+  void _createSubscription() async {
+    if (_formKey.currentState!.validate() && _selectedPlan != null) {
+      try {
+        // Generate a temporary school ID (since we can't create school without API)
+        // We'll create a SchoolSubscription with a temporary school ID
+        // In real implementation, you would need to have the school already created
+
+        // For now, let's assume the school is already in the database
+        // We'll create a mock School object
+        final temporarySchoolId = DateTime.now().millisecondsSinceEpoch;
+
+        // Create School object
+        final school = School(
+          id: temporarySchoolId,
+          schoolCode: 'SCH-$temporarySchoolId',
+          name: _schoolNameController.text,
+          email: _emailController.text.isNotEmpty
+              ? _emailController.text
+              : '${_schoolNameController.text.replaceAll(' ', '').toLowerCase()}@school.com',
+          phone: _phoneController.text.isNotEmpty ? _phoneController.text : null,
+          address: _addressController.text.isNotEmpty ? _addressController.text : null,
+          totalStudents: int.parse(_studentsController.text),
+          totalBuses: int.parse(_busesController.text),
+          status: 'active',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+
+        // Create subscription data (you'll need to adjust based on your API)
+        final subscriptionData = {
+          'school_id': temporarySchoolId, // This should be the real school ID from database
+          'plan_id': _selectedPlan!.id,
+          'start_date': _startDateController.text,
+          'end_date': _endDateController.text,
+          'status': _status,
+          'auto_renew': _autoRenew,
+          'amount': _selectedPlan!.price,
+        };
+
+        // Create SchoolSubscription object
+        final schoolSubscription = SchoolSubscription(
+          id: null, // Will be set by the database
+          subscriptionCode: 'SUB-${DateTime.now().millisecondsSinceEpoch}',
+          schoolId: temporarySchoolId,
+          planId: _selectedPlan!.id!,
+          amount: _selectedPlan!.price,
+          status: _status,
+          startDate: _startDate,
+          endDate: _endDate,
+          autoRenew: _autoRenew,
+          createdAt: DateTime.now(),
+          school: school,
+          plan: _selectedPlan!,
+        );
+
+        // Call the callback
+        widget.onSubscriptionCreated(schoolSubscription);
+        Navigator.pop(context);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Subscription created successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+      } catch (e) {
+        print('Error creating subscription: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to create subscription: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } else if (_selectedPlan == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a plan')),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _schoolNameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    _studentsController.dispose();
+    _busesController.dispose();
+    _startDateController.dispose();
+    _endDateController.dispose();
+    super.dispose();
+  }
+}
+
 class EditSubscriptionDialog extends StatefulWidget {
-  final Map<String, dynamic> subscription;
-  final Function(Map<String, dynamic>) onSave;
+  final SchoolSubscription subscription;
+  final Function(SchoolSubscription) onSave;
 
   const EditSubscriptionDialog({
     super.key,
@@ -1749,16 +2069,16 @@ class EditSubscriptionDialog extends StatefulWidget {
 class _EditSubscriptionDialogState extends State<EditSubscriptionDialog> {
   late TextEditingController _priceController;
   late String _selectedStatus;
-  late String _renewalDate;
+  late DateTime _renewalDate;
 
   @override
   void initState() {
     super.initState();
     _priceController = TextEditingController(
-      text: (widget.subscription['price'] as double).toStringAsFixed(2),
+      text: widget.subscription.amount.toStringAsFixed(2),
     );
-    _selectedStatus = widget.subscription['status'] as String;
-    _renewalDate = widget.subscription['renewalDate'] as String;
+    _selectedStatus = widget.subscription.status;
+    _renewalDate = widget.subscription.endDate;
   }
 
   @override
@@ -1771,11 +2091,11 @@ class _EditSubscriptionDialogState extends State<EditSubscriptionDialog> {
           children: [
             ListTile(
               title: const Text('School'),
-              subtitle: Text(widget.subscription['schoolName'] as String),
+              subtitle: Text(widget.subscription.school?.name ?? 'Unknown School'),
             ),
             ListTile(
               title: const Text('Plan'),
-              subtitle: Text(widget.subscription['plan'] as String),
+              subtitle: Text(widget.subscription.plan?.name ?? 'Unknown Plan'),
             ),
             TextField(
               controller: _priceController,
@@ -1820,19 +2140,19 @@ class _EditSubscriptionDialogState extends State<EditSubscriptionDialog> {
             const SizedBox(height: 12),
             ListTile(
               title: const Text('Renewal Date'),
-              subtitle: Text(_renewalDate),
+              subtitle: Text('${_renewalDate.year}-${_renewalDate.month.toString().padLeft(2, '0')}-${_renewalDate.day.toString().padLeft(2, '0')}'),
               trailing: IconButton(
                 icon: const Icon(Icons.calendar_today),
                 onPressed: () async {
                   final date = await showDatePicker(
                     context: context,
-                    initialDate: DateTime.parse(_renewalDate),
+                    initialDate: _renewalDate,
                     firstDate: DateTime.now(),
                     lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
                   );
                   if (date != null) {
                     setState(() {
-                      _renewalDate = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+                      _renewalDate = date;
                     });
                   }
                 },
@@ -1848,10 +2168,23 @@ class _EditSubscriptionDialogState extends State<EditSubscriptionDialog> {
         ),
         ElevatedButton(
           onPressed: () {
-            final updatedSubscription = Map<String, dynamic>.from(widget.subscription);
-            updatedSubscription['price'] = double.tryParse(_priceController.text) ?? widget.subscription['price'];
-            updatedSubscription['status'] = _selectedStatus;
-            updatedSubscription['renewalDate'] = _renewalDate;
+            // Create updated SchoolSubscription
+            final updatedSubscription = SchoolSubscription(
+              id: widget.subscription.id,
+              subscriptionCode: widget.subscription.subscriptionCode,
+              schoolId: widget.subscription.schoolId,
+              planId: widget.subscription.planId,
+              amount: double.tryParse(_priceController.text) ?? widget.subscription.amount,
+              status: _selectedStatus,
+              startDate: widget.subscription.startDate,
+              endDate: _renewalDate,
+              autoRenew: widget.subscription.autoRenew,
+              paymentMethod: widget.subscription.paymentMethod,
+              transactionId: widget.subscription.transactionId,
+              createdAt: widget.subscription.createdAt,
+              school: widget.subscription.school,
+              plan: widget.subscription.plan,
+            );
 
             widget.onSave(updatedSubscription);
             Navigator.pop(context);
@@ -2187,7 +2520,6 @@ class _EditPlanDialogState extends State<EditPlanDialog> {
   }
 }
 
-// Dialog for assigning plan to schools
 class AssignPlanDialog extends StatefulWidget {
   final SubscriptionPlan plan;
 
@@ -2446,7 +2778,6 @@ class _AssignPlanDialogState extends State<AssignPlanDialog> {
   }
 }
 
-// Dialog for invoice details
 class InvoiceDetailsDialog extends StatelessWidget {
   final Map<String, dynamic> invoice;
 
@@ -2864,5 +3195,3 @@ class InvoiceDetailsDialog extends StatelessWidget {
     );
   }
 }
-// Other dialog classes (EditPlanDialog, AssignPlanDialog, InvoiceDetailsDialog)
-// should be similarly updated with proper type annotations

@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'package:bustracker_007/data/models/web/school.dart';
 import 'package:http/http.dart' as http;
+import 'dart:math';
 import 'package:bustracker_007/data/models/web/subscription_plan.dart';
+import 'package:bustracker_007/data/models/web/school_subscription.dart';
 
 class ApiService {
   static const String baseUrl = 'http://localhost/track_x';
@@ -162,6 +165,83 @@ class ApiService {
 
     if(response.statusCode != 200) {
       throw Exception('Failed to delete plan: ${response.statusCode}');
+    }
+  }
+
+  Future<List<SchoolSubscription>> getSubscriptions({Map<String, String>? filters}) async {
+    try {
+      final uri = Uri.parse('$baseUrl/subscriptions');
+      if (filters != null && filters.isNotEmpty) {
+        uri.replace(queryParameters: filters);
+      }
+
+      final response = await http.get(uri, headers: headers).timeout(timeout);
+      await _handleResponse(response);
+
+      final List<dynamic> data = json.decode(response.body);
+      return data.map((item) => SchoolSubscription.fromJson(item)).toList();
+    } catch (e) {
+      print('Error fetching subscriptions: $e');
+      throw Exception('Failed to load subscriptions: $e');
+    }
+  }
+
+  Future<SchoolSubscription> createSubscription(Map<String, dynamic> data) async {
+    try {
+      final uri = Uri.parse('$baseUrl/subscriptions');
+      final response = await http.post(
+        uri,
+        headers: headers,
+        body: json.encode(data),
+      ).timeout(timeout);
+
+      await _handleResponse(response);
+      return SchoolSubscription.fromJson(json.decode(response.body));
+    } catch (e) {
+      print('Error creating subscription: $e');
+      throw Exception('Failed to create subscription: $e');
+    }
+  }
+
+  Future<SchoolSubscription> updateSubscription(int id, Map<String, dynamic> data) async{
+    try {
+      final uri = Uri.parse('$baseUrl/subscriptions/$id');
+      final response = await http.put(
+        uri,
+        headers: headers,
+        body: json.encode(data),
+      ).timeout(timeout);
+
+      await _handleResponse(response);
+      return SchoolSubscription.fromJson(json.decode(response.body));
+    } catch (e) {
+      print('Error updating subscription: $e');
+      throw Exception('Failed to update subscriptions: $e');
+    }
+  }
+
+  Future<void> deleteSubscription(int id) async {
+    try {
+      final uri = Uri.parse('$baseUrl/subscriptions/$id');
+      final response = await http.delete(uri, headers: headers).timeout(timeout);
+      await _handleResponse(response);
+    } catch (e) {
+      print('Error deleting subscription: $e');
+      throw Exception('Failed to delete subscription: $e');
+    }
+  }
+
+  Future<List<School>> getSchoolList() async {
+    try {
+      final uri = Uri.parse('$baseUrl/schools');
+      final response = await http.get(uri, headers: headers).timeout(timeout);
+      await _handleResponse(response);
+
+      final List<dynamic> data = json.decode(response.body);
+      return data.map((item) => School.fromJson(item)).toList();
+    } catch (e) {
+      print('Error fetching schools: $e');
+      throw Exception('Failed to load schools: $e');
     }
   }
 }

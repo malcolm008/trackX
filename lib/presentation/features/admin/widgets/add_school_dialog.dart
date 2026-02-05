@@ -19,8 +19,9 @@ class _AddSchoolDialogState extends State<AddSchoolDialog> {
   final ApiService _apiService = ApiService();
 
   List<SchoolSubscription> _subscriptions = [];
-  SchoolSubscription? _selectedSubscription;
-  bool _isLoadingSubscriptions = false;
+  List<School> _availableSchools = []; // Extracted unique schools from subscriptions
+  School? _selectedSchool;
+  bool _isLoading = false;
 
   late TextEditingController _nameController;
   late TextEditingController _emailController;
@@ -52,25 +53,71 @@ class _AddSchoolDialogState extends State<AddSchoolDialog> {
 
     if (school != null) {
       _status = school.status;
+      _selectedSchool = school;
     }
 
-    _loadSubscriptions();
+    _loadData();
   }
 
-  Future<void> _loadSubscriptions() async {
+  Future<void> _loadData() async {
     setState(() {
-      _isLoadingSubscriptions = true;
+      _isLoading = true;
     });
+
     try {
+      // Load subscriptions to get schools from them
       final subscriptions = await _apiService.getSubscriptions();
       setState(() {
         _subscriptions = subscriptions;
+
+        // Extract unique schools from subscriptions
+        final Map<String, School> uniqueSchools = {};
+        for (final subscription in subscriptions) {
+          if (!uniqueSchools.containsKey(subscription.schoolCode)) {
+            uniqueSchools[subscription.schoolCode] = School(
+              schoolCode: subscription.schoolCode,
+              name: subscription.schoolName,
+              email: subscription.schoolEmail ?? '',
+              phone: subscription.schoolPhone ?? '',
+              address: subscription.schoolAddress ?? '',
+              totalStudents: subscription.totalStudents,
+              totalBuses: subscription.totalBuses,
+              createdAt: subscription.createdAt,
+              updatedAt: DateTime.now(),
+            );
+          }
+        }
+        _availableSchools = uniqueSchools.values.toList();
+
+        // If we're adding a new school and have schools available, select the first one
+        if (widget.school == null && _availableSchools.isNotEmpty) {
+          _selectedSchool = _availableSchools.first;
+          _populateFieldsFromSelectedSchool();
+        }
       });
     } catch (e) {
-      print('Error loading subscriptions: $e');
+      print('Error loading data: $e');
     } finally {
       setState(() {
-        _isLoadingSubscriptions = false;
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _populateFieldsFromSelectedSchool() {
+    if (_selectedSchool != null) {
+      final school = _selectedSchool!;
+      setState(() {
+        _nameController.text = school.name;
+        _emailController.text = school.email;
+        _phoneController.text = school.phone ?? '';
+        _addressController.text = school.address ?? '';
+        _cityController.text = school.city ?? '';
+        _countryController.text = school.country ?? '';
+        _contactPersonController.text = school.contactPerson ?? '';
+        _studentsController.text = school.totalStudents.toString();
+        _busesController.text = school.totalBuses.toString();
+        _status = school.status;
       });
     }
   }
@@ -82,7 +129,9 @@ class _AddSchoolDialogState extends State<AddSchoolDialog> {
         constraints: const BoxConstraints(maxWidth: 600),
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Form(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Form(
             key: _formKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -106,8 +155,75 @@ class _AddSchoolDialogState extends State<AddSchoolDialog> {
                 ),
                 const SizedBox(height: 24),
 
-                if (widget.school == null) ...[
-                  _buildSubscriptionDropdown(),
+                // SCHOOL NAME DROPDOWN (FETCHED FROM SUBSCRIPTIONS)
+                if (widget.school == null && _availableSchools.isNotEmpty) ...[
+                  DropdownButtonFormField<School>(
+                    decoration: const InputDecoration(
+                      labelText: 'Select School from Subscriptions *',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.school),
+                    ),
+                    value: _selectedSchool,
+                    items: _availableSchools.map((school) {
+                      return DropdownMenuItem<School>(
+                        value: school,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(school.name),
+                            Text(
+                              '${school.schoolCode} • Students: ${school.totalStudents} • Buses: ${school.totalBuses}',
+                              style: const TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (School? school) {
+                      setState(() {
+                        _selectedSchool = school;
+                        if (school != null) {
+                          _populateFieldsFromSelectedSchool();
+                        }
+                      });
+                    },
+                    validator: (value) {
+                      if (value == null) return 'Please select a school';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ] else if (widget.school == null && _availableSchools.isEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange),
+                    ),
+                    child: const Text(
+                      'No schools found in subscriptions. Please create a subscription first.',
+                      style: TextStyle(color: Colors.orange),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // If editing an existing school, show text field instead
+                if (widget.school != null) ...[
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'School Name *',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'School name is required';
+                      }
+                      return null;
+                    },
+                  ),
                   const SizedBox(height: 16),
                 ],
 
@@ -118,19 +234,7 @@ class _AddSchoolDialogState extends State<AddSchoolDialog> {
                   mainAxisSpacing: 16,
                   childAspectRatio: 3,
                   children: [
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'School Name *',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'School name is required';
-                        }
-                        return null;
-                      },
-                    ),
+                    // Email field
                     TextFormField(
                       controller: _emailController,
                       decoration: const InputDecoration(
@@ -147,6 +251,7 @@ class _AddSchoolDialogState extends State<AddSchoolDialog> {
                         return null;
                       },
                     ),
+                    // Phone field
                     TextFormField(
                       controller: _phoneController,
                       decoration: const InputDecoration(
@@ -154,6 +259,7 @@ class _AddSchoolDialogState extends State<AddSchoolDialog> {
                         border: OutlineInputBorder(),
                       ),
                     ),
+                    // Contact Person field
                     TextFormField(
                       controller: _contactPersonController,
                       decoration: const InputDecoration(
@@ -161,6 +267,7 @@ class _AddSchoolDialogState extends State<AddSchoolDialog> {
                         border: OutlineInputBorder(),
                       ),
                     ),
+                    // Address field
                     TextFormField(
                       controller: _addressController,
                       decoration: const InputDecoration(
@@ -168,6 +275,7 @@ class _AddSchoolDialogState extends State<AddSchoolDialog> {
                         border: OutlineInputBorder(),
                       ),
                     ),
+                    // City field
                     TextFormField(
                       controller: _cityController,
                       decoration: const InputDecoration(
@@ -175,6 +283,7 @@ class _AddSchoolDialogState extends State<AddSchoolDialog> {
                         border: OutlineInputBorder(),
                       ),
                     ),
+                    // Country field
                     TextFormField(
                       controller: _countryController,
                       decoration: const InputDecoration(
@@ -182,6 +291,7 @@ class _AddSchoolDialogState extends State<AddSchoolDialog> {
                         border: OutlineInputBorder(),
                       ),
                     ),
+                    // Status dropdown
                     DropdownButtonFormField<String>(
                       value: _status,
                       decoration: const InputDecoration(
@@ -200,6 +310,7 @@ class _AddSchoolDialogState extends State<AddSchoolDialog> {
                         });
                       },
                     ),
+                    // Students field (auto-populated, read-only)
                     TextFormField(
                       controller: _studentsController,
                       decoration: const InputDecoration(
@@ -207,8 +318,9 @@ class _AddSchoolDialogState extends State<AddSchoolDialog> {
                         border: OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.number,
-                      readOnly: widget.school == null,
+                      readOnly: widget.school == null && _availableSchools.isNotEmpty,
                     ),
+                    // Buses field (auto-populated, read-only)
                     TextFormField(
                       controller: _busesController,
                       decoration: const InputDecoration(
@@ -216,7 +328,7 @@ class _AddSchoolDialogState extends State<AddSchoolDialog> {
                         border: OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.number,
-                      readOnly: widget.school == null,
+                      readOnly: widget.school == null && _availableSchools.isNotEmpty,
                     ),
                   ],
                 ),
@@ -247,75 +359,6 @@ class _AddSchoolDialogState extends State<AddSchoolDialog> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildSubscriptionDropdown() {
-    if (_isLoadingSubscriptions) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_subscriptions.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.orange[50],
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.orange),
-        ),
-        child: const Text(
-          'No existiing subscriptions found. Please create a subscription first.',
-          style: TextStyle(color: Colors.orange),
-        ),
-      );
-    }
-
-    return DropdownButtonFormField<SchoolSubscription>(
-      decoration: const InputDecoration(
-        labelText: 'Copy from Existing Subscription *',
-        border: OutlineInputBorder(),
-        prefixIcon: Icon(Icons.subscriptions),
-        helperText: 'Select a subscription',
-      ),
-      value: _selectedSubscription,
-      items: _subscriptions.map((subscription) {
-        final school = subscription.school;
-        return DropdownMenuItem<SchoolSubscription>(
-          value: subscription,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(school?.name ?? 'Unknown School'),
-              Text(
-                'Subscription ID: ${subscription.subscriptionCode}',
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-      onChanged: (SchoolSubscription? subscription) {
-        setState(() {
-          _selectedSubscription = subscription;
-          if (subscription != null && subscription.school != null) {
-            final school = subscription.school!;
-
-            _nameController.text = school.name;
-            _emailController.text = school.email;
-            _phoneController.text = school.phone ?? '';
-            _addressController.text = school.address ?? '';
-            _studentsController.text = school.totalStudents.toString();
-            _busesController.text = school.totalBuses.toString();
-            _status = school.status;
-          }
-        });
-      },
-      validator: widget.school == null ? (value) {
-        if (value == null) {
-          return 'Please select a subscription to copy data from';
-        }
-        return null;
-      } : null,
     );
   }
 

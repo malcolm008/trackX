@@ -168,26 +168,38 @@ class ApiService {
     }
   }
 
-  Future<List<SchoolSubscription>> getSubscriptions({Map<String, String>? filters}) async {
+// In your ApiService class
+  Future<List<SchoolSubscription>> getSubscriptions() async {
     try {
-      final uri = Uri.parse('$baseUrl/subscriptions');
-      if (filters != null && filters.isNotEmpty) {
-        uri.replace(queryParameters: filters);
+      final response = await http.get(
+        Uri.parse('$baseUrl/subscriptions'), // Replace with your actual endpoint
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      );
+
+      print('DEBUG: API Response Status: ${response.statusCode}');
+      print('DEBUG: API Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        print('DEBUG: Parsed ${data.length} subscription items');
+
+        return data.map((json) => SchoolSubscription.fromJson(json)).toList();
+      } else {
+        throw Exception('Failed to load subscriptions: ${response.statusCode}');
       }
-
-      final response = await http.get(uri, headers: headers).timeout(timeout);
-      await _handleResponse(response);
-
-      final List<dynamic> data = json.decode(response.body);
-      return data.map((item) => SchoolSubscription.fromJson(item)).toList();
     } catch (e) {
-      print('Error fetching subscriptions: $e');
-      throw Exception('Failed to load subscriptions: $e');
+      print('ERROR in getSubscriptions: $e');
+      rethrow;
     }
   }
 
   Future<SchoolSubscription> createSubscription(Map<String, dynamic> data) async {
     try {
+      print('Creating subscription with data: $data'); // Debug
+
       final uri = Uri.parse('$baseUrl/subscriptions');
       final response = await http.post(
         uri,
@@ -195,11 +207,20 @@ class ApiService {
         body: json.encode(data),
       ).timeout(timeout);
 
+      print('Response status: ${response.statusCode}'); // Debug
+      print('Response headers: ${response.headers}'); // Debug
+      print('Response body (raw): ${response.body}'); // Debug - This is key!
+
+      // Check if response body is empty
+      if (response.body.isEmpty) {
+        throw Exception('Server returned empty response');
+      }
+
       await _handleResponse(response);
       return SchoolSubscription.fromJson(json.decode(response.body));
     } catch (e) {
       print('Error creating subscription: $e');
-      throw Exception('Failed to create subscription: $e');
+      rethrow;
     }
   }
 
@@ -223,8 +244,19 @@ class ApiService {
   Future<void> deleteSubscription(int id) async {
     try {
       final uri = Uri.parse('$baseUrl/subscriptions/$id');
+
+      final Map<String, String> headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+
       final response = await http.delete(uri, headers: headers).timeout(timeout);
-      await _handleResponse(response);
+
+      if (response.statusCode == 200) {
+        print('DEBUG: Successfully deleted subscription $id');
+      } else {
+        throw Exception('Failed to delete subscription. Status: ${response.statusCode}');
+      }
     } catch (e) {
       print('Error deleting subscription: $e');
       throw Exception('Failed to delete subscription: $e');

@@ -56,7 +56,7 @@ class SchoolSubscription {
         return DateTime(startDate.year, startDate.month + 1, startDate.day);
       case 'quarterly':
         return DateTime(startDate.year, startDate.month + 3, startDate.day);
-      case 'annually':
+      case 'annual':
         return DateTime(startDate.year + 1, startDate.month, startDate.day);
       default:
         return startDate.add(const Duration(days: 30));

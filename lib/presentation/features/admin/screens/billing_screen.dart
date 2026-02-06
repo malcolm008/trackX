@@ -1167,9 +1167,9 @@ class _BillingScreenState extends State<BillingScreen> with SingleTickerProvider
       context: context,
       builder: (context) => EditSubscriptionDialog(
         subscription: subscription,
+        apiService: _apiService, // Pass the apiService
         onSave: (updatedSubscription) {
           setState(() {
-            // Use SchoolSubscription properties, not Map keys
             final index = _subscriptions.indexWhere((s) => s.id == subscription.id);
             if (index != -1) {
               _subscriptions[index] = updatedSubscription;
@@ -1701,6 +1701,19 @@ class _CreateSubscriptionDialogState extends State<CreateSubscriptionDialog> {
 
   List<SubscriptionPlan> _availablePlans = [];
 
+  DateTime _calculateEndDate(DateTime startDate, String billingCycle) {
+    switch (billingCycle.toLowerCase()) {
+      case 'monthly':
+        return DateTime(startDate.year, startDate.month +1 , startDate.day);
+      case 'quarterly':
+        return DateTime(startDate.year, startDate.month + 3, startDate.day);
+      case 'annual':
+        return DateTime(startDate.year + 1, startDate.month, startDate.day);
+      default:
+        return startDate.add(const Duration(days: 30));
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -1841,7 +1854,15 @@ class _CreateSubscriptionDialogState extends State<CreateSubscriptionDialog> {
         child: Text('${p.name} - \$${p.price}/${p.billingCycle}'),
       ))
           .toList(),
-      onChanged: (p) => setState(() => _selectedPlan = p),
+      onChanged: (p) {
+        setState(() {
+          _selectedPlan = p;
+          if (p != null) {
+            _endDate = _calculateEndDate(_startDate, p.billingCycle);
+            _endDateController.text = _formatDate(_endDate);
+          }
+        });
+      },
       validator: (v) => v == null ? 'Please select a plan' : null,
     );
   }
@@ -1851,7 +1872,17 @@ class _CreateSubscriptionDialogState extends State<CreateSubscriptionDialog> {
       children: [
         Expanded(child: _buildDateField(_startDateController, true)),
         const SizedBox(width: 16),
-        Expanded(child: _buildDateField(_endDateController, false)),
+        Expanded(
+          child: TextFormField(
+            controller: _endDateController,
+            readOnly: true,
+            enabled: false, // Disable editing since it's calculated
+            decoration: const InputDecoration(
+              labelText: 'Renewal Date (Auto-calculated)',
+              border: OutlineInputBorder(),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -1867,18 +1898,19 @@ class _CreateSubscriptionDialogState extends State<CreateSubscriptionDialog> {
       onTap: () async {
         final picked = await showDatePicker(
           context: context,
-          initialDate: isStart ? _startDate : _endDate,
+          initialDate: _startDate,
           firstDate: DateTime.now(),
           lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
         );
         if (picked != null) {
           setState(() {
-            if (isStart) {
-              _startDate = picked;
-              _startDateController.text = _formatDate(picked);
-            } else {
-              _endDate = picked;
-              _endDateController.text = _formatDate(picked);
+            _startDate = picked;
+            _startDateController.text = _formatDate(picked);
+
+            // Recalculate end date based on selected plan's billing cycle
+            if (_selectedPlan != null) {
+              _endDate = _calculateEndDate(picked, _selectedPlan!.billingCycle);
+              _endDateController.text = _formatDate(_endDate);
             }
           });
         }
@@ -1924,23 +1956,25 @@ class _CreateSubscriptionDialogState extends State<CreateSubscriptionDialog> {
     final payload = {
       'subscription_code': 'SUB-${DateTime.now().millisecondsSinceEpoch}',
       'school_code': _generateSchoolCode(),
+      'school_name': _schoolNameController.text.trim(),
       'school_email': _emailController.text.trim(),
       'school_phone': _phoneController.text.trim(),
       'school_address': _addressController.text.trim(),
       'total_students': int.parse(_studentsController.text),
       'total_buses': int.parse(_busesController.text),
       'plan_id': _selectedPlan!.id,
+      'plan_billing_cycle': _selectedPlan!.billingCycle,
       'amount': _selectedPlan!.price,
       'status': _status,
       'start_date': _startDateController.text,
-      'end_date': _endDateController.text,
       'auto_renew': _autoRenew ? 1 : 0,
       'payment_method': 'manual',
       'transaction_id': 'TXN-${DateTime.now().millisecondsSinceEpoch}',
     };
 
-    final subscription =
-    await widget.apiService.createSubscription(payload);
+    print('DEBUG: Creating subscription with payload: $payload');
+
+    final subscription = await widget.apiService.createSubscription(payload);
 
     widget.onSubscriptionCreated(subscription);
     Navigator.pop(context);
@@ -1968,11 +2002,13 @@ class _CreateSubscriptionDialogState extends State<CreateSubscriptionDialog> {
 class EditSubscriptionDialog extends StatefulWidget {
   final SchoolSubscription subscription;
   final Function(SchoolSubscription) onSave;
+  final ApiService apiService; // Add this parameter
 
   const EditSubscriptionDialog({
     super.key,
     required this.subscription,
     required this.onSave,
+    required this.apiService, // Add this
   });
 
   @override
@@ -1981,75 +2017,317 @@ class EditSubscriptionDialog extends StatefulWidget {
 }
 
 class _EditSubscriptionDialogState extends State<EditSubscriptionDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController _schoolNameController;
+  late TextEditingController _emailController;
+  late TextEditingController _phoneController;
+  late TextEditingController _addressController;
+  late TextEditingController _studentsController;
+  late TextEditingController _busesController;
   late TextEditingController _priceController;
-  late String _selectedStatus;
+
   late DateTime _renewalDate;
+  late String _selectedStatus;
+  late bool _autoRenew;
+
+  SubscriptionPlan? _selectedPlan;
+  List<SubscriptionPlan> _availablePlans = [];
+  bool _isLoading = false;
+  bool _recalculateEndDate = false;
+
+  DateTime _calculateNewEndDate(DateTime startDate, String billingCycle) {
+    switch (billingCycle.toLowerCase()) {
+      case 'monthly':
+        return DateTime(startDate.year, startDate.month + 1, startDate.day);
+      case 'quarterly':
+        return DateTime(startDate.year, startDate.month + 3, startDate.day);
+      case 'annual':
+        return DateTime(startDate.year + 1, startDate.month, startDate.day);
+      default:
+        return startDate.add(const Duration(days: 30));
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    // Initialize with current subscription values
+    _schoolNameController = TextEditingController(
+      text: widget.subscription.schoolName,
+    );
+    _emailController = TextEditingController(
+      text: widget.subscription.schoolEmail ?? '',
+    );
+    _phoneController = TextEditingController(
+      text: widget.subscription.schoolPhone ?? '',
+    );
+    _addressController = TextEditingController(
+      text: widget.subscription.schoolAddress ?? '',
+    );
+    _studentsController = TextEditingController(
+      text: widget.subscription.totalStudents.toString(),
+    );
+    _busesController = TextEditingController(
+      text: widget.subscription.totalBuses.toString(),
+    );
     _priceController = TextEditingController(
       text: widget.subscription.amount.toStringAsFixed(2),
     );
-    _selectedStatus = widget.subscription.status;
+
     _renewalDate = widget.subscription.endDate;
+    _selectedStatus = widget.subscription.status;
+    _autoRenew = widget.subscription.autoRenew;
+    _selectedPlan = widget.subscription.plan;
+
+    // Load available plans
+    _loadPlans();
   }
+
+  Future<void> _loadPlans() async {
+    setState(() => _isLoading = true);
+    try {
+      _availablePlans = await widget.apiService.getAllPlans();
+      // Set the current plan if it exists
+      if (_selectedPlan?.id != null) {
+        final existingPlan = _availablePlans.firstWhere(
+              (p) => p.id == _selectedPlan!.id,
+          orElse: () => _selectedPlan!,
+        );
+        _selectedPlan = existingPlan;
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  String _formatDate(DateTime date) =>
+      '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Edit Subscription'),
-      content: SingleChildScrollView(
+      scrollable: true,
+      content: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Form(
+        key: _formKey,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Non-editable fields
             ListTile(
-              title: const Text('School'),
-              subtitle:
-              Text(widget.subscription.schoolCode ?? 'Unknown School'),
+              leading: const Icon(Icons.code, color: Colors.grey),
+              title: const Text('Subscription Code'),
+              subtitle: Text(
+                widget.subscription.subscriptionCode,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
             ),
             ListTile(
-              title: const Text('Plan'),
-              subtitle:
-              Text(widget.subscription.plan?.name ?? 'Unknown Plan'),
+              leading: const Icon(Icons.school, color: Colors.grey),
+              title: const Text('School Code'),
+              subtitle: Text(
+                widget.subscription.schoolCode,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
             ),
-            TextField(
+            const SizedBox(height: 16),
+
+            // School Name (editable)
+            TextFormField(
+              controller: _schoolNameController,
+              decoration: const InputDecoration(
+                labelText: 'School Name *',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.school),
+              ),
+              validator: (v) =>
+              v == null || v.isEmpty ? 'School name is required' : null,
+            ),
+            const SizedBox(height: 16),
+
+            // Plan Selection (editable)
+            DropdownButtonFormField<SubscriptionPlan>(
+              decoration: const InputDecoration(
+                labelText: 'Plan *',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.next_plan),
+              ),
+              value: _selectedPlan,
+              items: _availablePlans
+                  .map((p) => DropdownMenuItem(
+                value: p,
+                child: Text('${p.name} - \$${p.price}/${p.billingCycle}'),
+              ))
+                  .toList(),
+              onChanged: (p) {
+                setState(() {
+                  _selectedPlan = p;
+                  if (p != null) {
+                    _priceController.text = p.price.toStringAsFixed(2);
+                    _renewalDate = _calculateNewEndDate(widget.subscription.startDate, p.billingCycle);
+                  }
+                });
+              },
+              validator: (v) => v == null ? 'Please select a plan' : null,
+            ),
+            const SizedBox(height: 16),
+
+            // Contact Information (editable)
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _emailController,
+                    decoration: const InputDecoration(
+                      labelText: 'Email',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.email),
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: TextFormField(
+                    controller: _phoneController,
+                    decoration: const InputDecoration(
+                      labelText: 'Phone',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.phone),
+                    ),
+                    keyboardType: TextInputType.phone,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Address (editable)
+            TextFormField(
+              controller: _addressController,
+              decoration: const InputDecoration(
+                labelText: 'Address',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.location_on),
+              ),
+              maxLines: 2,
+            ),
+            const SizedBox(height: 16),
+
+            // Statistics (editable)
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _studentsController,
+                    decoration: const InputDecoration(
+                      labelText: 'Students *',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.people),
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: (v) => v == null || int.tryParse(v) == null
+                        ? 'Enter valid number' : null,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: TextFormField(
+                    controller: _busesController,
+                    decoration: const InputDecoration(
+                      labelText: 'Buses *',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.directions_bus),
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: (v) => v == null || int.tryParse(v) == null
+                        ? 'Enter valid number' : null,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Price (editable)
+            TextFormField(
               controller: _priceController,
               decoration: const InputDecoration(
-                labelText: 'Price',
+                labelText: 'Price *',
                 border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.attach_money),
                 prefixText: '\$',
               ),
-              keyboardType:
-              const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
+              validator: (v) => v == null || double.tryParse(v) == null
+                  ? 'Enter valid price' : null,
             ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              value: _selectedStatus,
-              decoration: const InputDecoration(
-                labelText: 'Status',
-                border: OutlineInputBorder(),
-              ),
-              items: const [
-                DropdownMenuItem(value: 'active', child: Text('ACTIVE')),
-                DropdownMenuItem(value: 'pending', child: Text('PENDING')),
-                DropdownMenuItem(value: 'trial', child: Text('TRIAL')),
-                DropdownMenuItem(value: 'expiring', child: Text('EXPIRING')),
-                DropdownMenuItem(value: 'cancelled', child: Text('CANCELLED')),
+            const SizedBox(height: 16),
+
+            // Status and Auto Renew (editable)
+            Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedStatus,
+                    decoration: const InputDecoration(
+                      labelText: 'Status *',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'active', child: Text('Active')),
+                      DropdownMenuItem(value: 'pending', child: Text('Pending')),
+                      DropdownMenuItem(value: 'trial', child: Text('Trial')),
+                      DropdownMenuItem(value: 'cancelled', child: Text('Cancelled')),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => _selectedStatus = value);
+                      }
+                    },
+                    validator: (v) => v == null ? 'Please select status' : null,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: SwitchListTile(
+                    title: const Text('Auto Renew'),
+                    value: _autoRenew,
+                    onChanged: (value) {
+                      setState(() => _autoRenew = value);
+                    },
+                  ),
+                ),
               ],
+            ),
+            const SizedBox(height: 16),
+
+            SwitchListTile(
+              title: const Text('Recalculate renewal date based on plan'),
+              subtitle: const Text('When checked, renewal date will be calculated from start date'),
+              value: _recalculateEndDate,
               onChanged: (value) {
-                if (value != null) {
-                  setState(() => _selectedStatus = value);
-                }
+                setState(() {
+                  _recalculateEndDate = value;
+                  if (value && _selectedPlan != null) {
+                    _renewalDate = _calculateNewEndDate(widget.subscription.startDate, _selectedPlan!.billingCycle);
+                  }
+                });
               },
             ),
-            const SizedBox(height: 12),
+
             ListTile(
-              title: const Text('Renewal Date'),
+              title: const Text('Renewal Date *'),
               subtitle: Text(
-                '${_renewalDate.year}-'
-                    '${_renewalDate.month.toString().padLeft(2, '0')}-'
-                    '${_renewalDate.day.toString().padLeft(2, '0')}',
+                _formatDate(_renewalDate),
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               trailing: IconButton(
                 icon: const Icon(Icons.calendar_today),
@@ -2058,14 +2336,23 @@ class _EditSubscriptionDialogState extends State<EditSubscriptionDialog> {
                     context: context,
                     initialDate: _renewalDate,
                     firstDate: DateTime.now(),
-                    lastDate:
-                    DateTime.now().add(const Duration(days: 365 * 2)),
+                    lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
                   );
                   if (date != null) {
                     setState(() => _renewalDate = date);
                   }
                 },
               ),
+            ),
+
+            // Display read-only dates
+            ListTile(
+              title: const Text('Start Date'),
+              subtitle: Text(_formatDate(widget.subscription.startDate)),
+            ),
+            ListTile(
+              title: const Text('Created At'),
+              subtitle: Text(_formatDate(widget.subscription.createdAt)),
             ),
           ],
         ),
@@ -2076,26 +2363,67 @@ class _EditSubscriptionDialogState extends State<EditSubscriptionDialog> {
           child: const Text('Cancel'),
         ),
         ElevatedButton(
-          onPressed: () {
-            final updatedSubscription =
-            widget.subscription.copyWith(
-              amount: double.tryParse(_priceController.text) ??
-                  widget.subscription.amount,
-              status: _selectedStatus,
-              endDate: _renewalDate,
-            );
+          onPressed: () async {
+            if (_formKey.currentState!.validate() && _selectedPlan != null) {
+              // Create updated subscription using copyWith
+              final updatedSubscription = widget.subscription.copyWith(
+                schoolName: _schoolNameController.text.trim(),
+                schoolEmail: _emailController.text.trim(),
+                schoolPhone: _phoneController.text.trim(),
+                schoolAddress: _addressController.text.trim(),
+                totalStudents: int.parse(_studentsController.text),
+                totalBuses: int.parse(_busesController.text),
+                planId: _selectedPlan!.id ?? 0, // Ensure we have planId
+                amount: double.parse(_priceController.text),
+                status: _selectedStatus,
+                endDate: _renewalDate,
+                autoRenew: _autoRenew,
+                plan: _selectedPlan,
+              );
 
-            widget.onSave(updatedSubscription);
-            Navigator.pop(context);
+              try {
+                // Call API to update subscription
+                await widget.apiService.updateSubscription(
+                  updatedSubscription.id!, // Assuming id is not null for existing
+                  updatedSubscription.toJson(), // Convert to JSON
+                );
 
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Subscription updated')),
-            );
+                // Update local state
+                widget.onSave(updatedSubscription);
+                Navigator.pop(context);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Subscription updated successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to update: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
           },
           child: const Text('Save Changes'),
         ),
       ],
     );
+  }
+
+  @override
+  void dispose() {
+    _schoolNameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    _studentsController.dispose();
+    _busesController.dispose();
+    _priceController.dispose();
+    super.dispose();
   }
 }
 

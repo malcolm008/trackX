@@ -203,13 +203,6 @@ class _AdminResponsiveLayoutState extends State<AdminResponsiveLayout> {
                 ),
                 _buildNavItem(
                   context,
-                  Icons.subscriptions,
-                  'Subscriptions',
-                  isActive: widget.title == 'Subscriptions',
-                  onTap: () => widget.onNavigationSelected?.call('Subscriptions'),
-                ),
-                _buildNavItem(
-                  context,
                   Icons.people,
                   'Users',
                   isActive: widget.title == 'Users',
@@ -232,7 +225,7 @@ class _AdminResponsiveLayoutState extends State<AdminResponsiveLayout> {
                 _buildNavItem(
                   context,
                   Icons.receipt,
-                  'Billing',
+                  'Billing / Subscriptions',
                   isActive: widget.title == 'Billing',
                   onTap: () => widget.onNavigationSelected?.call('Billing'),
                 ),

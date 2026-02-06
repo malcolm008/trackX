@@ -2,7 +2,6 @@ import 'package:bustracker_007/presentation/features/admin/screens/analytics_scr
 import 'package:bustracker_007/presentation/features/admin/screens/billing_screen.dart';
 import 'package:flutter/material.dart';
 import 'admin_responsive_layout.dart';
-import 'screens/subscriptions_screen.dart';
 import 'screens/users_screen.dart';
 import 'screens/schools_screen.dart';
 import 'screens/live_map_screen.dart';
@@ -20,7 +19,6 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   int _currentIndex = 0;
   final List<String> _screenTitles = [
     'Dashboard',
-    'Subscriptions',
     'Users',
     'Schools',
     'Live Map',
@@ -31,7 +29,6 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
 
   final List<Widget> _screens = [
     AdminDashboardScreen(),
-    const SubscriptionsScreen(),
     const UsersScreen(),
     const SchoolsScreen(),
     const LiveMapScreen(),

@@ -50,7 +50,31 @@ class SchoolSubscription {
     this.plan,
   });
 
+  static DateTime calculateRenewalDate(DateTime startDate, String billingCycle) {
+    switch (billingCycle.toLowerCase()) {
+      case 'monthly':
+        return DateTime(startDate.year, startDate.month + 1, startDate.day);
+      case 'quarterly':
+        return DateTime(startDate.year, startDate.month + 3, startDate.day);
+      case 'annually':
+        return DateTime(startDate.year + 1, startDate.month, startDate.day);
+      default:
+        return startDate.add(const Duration(days: 30));
+    }
+  }
+
   factory SchoolSubscription.fromJson(Map<String, dynamic> json) {
+    print('DEBUG: Parsing subscription JSON keys: ${json.keys.toList()}');
+
+    DateTime? safeParseDate(dynamic dateValue) {
+      if (dateValue == null) return null;
+      try {
+        return DateTime.parse(dateValue.toString());
+      } catch(e) {
+        print('Warning: Could not parse date: $dateValue');
+        return null;
+      }
+    }
     // Parse the features string if it exists
     Map<String, dynamic> features = {};
     if (json['features'] != null && json['features'] is String) {
@@ -61,40 +85,88 @@ class SchoolSubscription {
       }
     }
 
+    final startDate = DateTime.parse(json['start_date'].toString());
+    final billingCycle = (json['billing_cycle']?.toString().toLowerCase() ?? 'monthly');
+
+    DateTime endDate;
+    final parsedEndDate = safeParseDate(json['end_date']);
+    if(parsedEndDate != null) {
+      endDate = parsedEndDate;
+    } else {
+      endDate = SchoolSubscription.calculateRenewalDate(startDate, billingCycle);
+    }
+
+    int? parsedId;
+    if (json['id'] != null) {
+      if (json['id'] is int) {
+        parsedId = json['id'] as int;
+      } else if (json['id'] is String) {
+        parsedId = int.tryParse(json['id'] as String);
+      }
+    }
+
     return SchoolSubscription(
-      id: json['id'],
+      id: parsedId,
       subscriptionCode: json['subscription_code'] ?? '',
-      schoolCode: json['school_code'] ?? '',
-      schoolName: json['school_name'] ?? '',
-      schoolEmail: json['school_email'],
-      schoolPhone: json['school_phone'],
-      schoolAddress: json['school_address'],
-      totalStudents: json['total_students'] ?? 0,
-      totalBuses: json['total_buses'] ?? 0,
-      planId: json['plan_id'],
-      amount: (json['amount'] != null ?
-      double.parse(json['amount'].toString()) : 0), // FIX: Parse amount properly
-      status: (json['status'] ?? 'active').toString().toLowerCase(),
-      startDate: DateTime.parse(json['start_date']),
-      endDate: DateTime.parse(json['end_date']),
-      autoRenew: (json['auto_renew'] == 1) ? true : false,
-      paymentMethod: json['payment_method'],
-      transactionId: json['transaction_id'],
-      createdAt: DateTime.parse(json['created_at']),
+      schoolCode: json['school_code']?.toString() ?? '',
+      schoolName: json['school_name']?.toString() ?? '',
+      schoolEmail: json['school_email']?.toString(),
+      schoolPhone: json['school_phone']?.toString(),
+      schoolAddress: json['school_address']?.toString(),
+      totalStudents: json['total_students'] is int
+          ? json['total_students'] as int
+          : (json['total_students'] is String
+          ? int.tryParse(json['total_students'] as String) ?? 0
+          : 0),
+      totalBuses: json['total_buses'] is int
+          ? json['total_buses'] as int
+          : (json['total_buses'] is String
+          ? int.tryParse(json['total_buses'] as String) ?? 0
+          : 0),
+      planId: json['plan_id'] is int
+          ? json['plan_id'] as int
+          : (json['plan_id'] is String
+          ? int.tryParse(json['plan_id'] as String) ?? 0
+          : 0),
+      amount: (json['amount'] is num
+          ? (json['amount'] as num).toDouble()
+          : (json['amount'] is String
+          ? double.tryParse(json['amount'] as String) ?? 0.0
+          : 0.0)),
+      status: (json['status']?.toString().toLowerCase() ?? 'active'),
+      startDate: startDate,
+      endDate: endDate,
+      autoRenew: json['auto_renew'] is int
+          ? json['auto_renew'] == 1
+          : (json['auto_renew'] is String
+          ? json['auto_renew'] == '1'
+          : (json['auto_renew'] is bool
+          ? json['auto_renew'] as bool
+          : false)),
+      paymentMethod: json['payment_method']?.toString(),
+      transactionId: json['transaction_id']?.toString(),
+      createdAt: safeParseDate(json['created_at']) ?? DateTime.now(),
       plan: json['plan_id'] != null
-          ? SubscriptionPlan.fromJson({
-        'id': json['plan_id'],
-        'plan_code': '', // This might be missing in your API
-        'name': json['plan_name'] ?? '',
-        'description': '', // Add if available
-        'price': json['amount'] != null ?
-        double.parse(json['amount'].toString()) : 0,
-        'billing_cycle': json['billing_cycle'] ?? 'monthly',
-        'features': features, // Use parsed features map
-        'limitations': {}, // Add if available
-        'is_active': true,
-        'created_at': json['created_at'],
-      })
+          ? SubscriptionPlan(
+        id: json['plan_id'] is int
+            ? json['plan_id'] as int
+            : (json['plan_id'] is String
+            ? int.tryParse(json['plan_id'] as String) ?? 0
+            : 0),
+        planCode: json['plan_code']?.toString() ?? '',
+        name: json['plan_name']?.toString() ?? '',
+        description: json['description']?.toString() ?? '',
+        price: (json['amount'] is num
+            ? (json['amount'] as num).toDouble()
+            : (json['amount'] is String
+            ? double.tryParse(json['amount'] as String) ?? 0.0
+            : 0.0)),
+        billingCycle: json['billing_cycle']?.toString().toLowerCase() ?? 'monthly',
+        features: features,
+        limitations: {},
+        isActive: true,
+        createdAt: safeParseDate(json['created_at']) ?? DateTime.now(),
+      )
           : null,
     );
   }
@@ -146,7 +218,7 @@ class SchoolSubscription {
 
   Map<String, dynamic> toJson() {
     return {
-      if (id != null) 'id': id,
+      if (id != null) 'id': id!.toString(),
       'subscription_code': subscriptionCode,
       'school_code': schoolCode,
       'school_name': schoolName,
@@ -158,8 +230,8 @@ class SchoolSubscription {
       'plan_id': planId,
       'amount': amount,
       'status': status,
-      'start_date': startDate.toIso8601String(),
-      'end_date': endDate.toIso8601String(),
+      'start_date': startDate.toIso8601String().split('T')[0],
+      'end_date': endDate.toIso8601String().split('T')[0],
       'auto_renew': autoRenew,
       if (paymentMethod != null) 'payment_method': paymentMethod,
       if (transactionId != null) 'transaction_id': transactionId,

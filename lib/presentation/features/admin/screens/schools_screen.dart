@@ -352,12 +352,6 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
         'icon': Icons.directions_bus,
         'color': Colors.indigo.shade200,
       },
-      {
-        'title': 'Revenue/Month',
-        'value': '\$${stats['revenue_per_month']}',
-        'icon': Icons.attach_money,
-        'color': Colors.cyan,
-      },
     ];
 
     return GridView.builder(
@@ -551,20 +545,6 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
                               ),
                               onTap: () => _editSchool(school),
                             ),
-                            const PopupMenuItem(
-                              value: 'users',
-                              child: ListTile(
-                                leading: Icon(Icons.people, color: Colors.grey,),
-                                title: Text('Manage Users', style: TextStyle(color: Colors.grey,)),
-                              ),
-                            ),
-                            const PopupMenuItem(
-                              value: 'buses',
-                              child: ListTile(
-                                leading: Icon(Icons.directions_bus, color: Colors.grey),
-                                title: Text('Manage Buses', style: TextStyle(color: Colors.grey,)),
-                              ),
-                            ),
                             PopupMenuItem(
                               value: 'delete',
                               child: ListTile(
@@ -688,8 +668,8 @@ class _SchoolsScreenState extends State<SchoolsScreen> {
               ),
               const SizedBox(width: 8),
               IconButton(
-                icon: Icon(Icons.more_vert, size: isTablet ? 20 : 18),
-                onPressed: () {},
+                icon: Icon(Icons.delete, size: isTablet ? 20 : 18),
+                onPressed: () => _deleteSchool(school),
               ),
             ],
           ),

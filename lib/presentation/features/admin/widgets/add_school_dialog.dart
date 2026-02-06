@@ -158,11 +158,25 @@ class _AddSchoolDialogState extends State<AddSchoolDialog> {
                 // SCHOOL NAME DROPDOWN (FETCHED FROM SUBSCRIPTIONS)
                 if (widget.school == null && _availableSchools.isNotEmpty) ...[
                   DropdownButtonFormField<School>(
+                    isDense: true,
                     decoration: const InputDecoration(
                       labelText: 'Select School from Subscriptions *',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.school),
+                      contentPadding: EdgeInsets.symmetric(vertical: 24, horizontal: 12),
                     ),
+                    selectedItemBuilder: (context) {
+                      return _availableSchools.map((school) {
+                        return Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            school.name,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        );
+                      }).toList();
+                    },                    
                     value: _selectedSchool,
                     items: _availableSchools.map((school) {
                       return DropdownMenuItem<School>(
@@ -192,7 +206,7 @@ class _AddSchoolDialogState extends State<AddSchoolDialog> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
                 ] else if (widget.school == null && _availableSchools.isEmpty) ...[
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -232,7 +246,7 @@ class _AddSchoolDialogState extends State<AddSchoolDialog> {
                   crossAxisCount: 2,
                   crossAxisSpacing: 16,
                   mainAxisSpacing: 16,
-                  childAspectRatio: 3,
+                  childAspectRatio: 3.5,
                   children: [
                     // Email field
                     TextFormField(
@@ -332,7 +346,7 @@ class _AddSchoolDialogState extends State<AddSchoolDialog> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 3),
                 Row(
                   children: [
                     Expanded(

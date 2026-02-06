@@ -198,46 +198,97 @@ class ApiService {
 
   Future<SchoolSubscription> createSubscription(Map<String, dynamic> data) async {
     try {
-      print('Creating subscription with data: $data'); // Debug
+      print('DEBUG: Creating subscription with data: $data');
 
-      final uri = Uri.parse('$baseUrl/subscriptions');
       final response = await http.post(
-        uri,
-        headers: headers,
-        body: json.encode(data),
-      ).timeout(timeout);
+        Uri.parse('$baseUrl/subscriptions'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode(data),
+      );
 
-      print('Response status: ${response.statusCode}'); // Debug
-      print('Response headers: ${response.headers}'); // Debug
-      print('Response body (raw): ${response.body}'); // Debug - This is key!
+      print('DEBUG: Create response status: ${response.statusCode}');
+      print('DEBUG: Create response body: ${response.body}');
 
-      // Check if response body is empty
-      if (response.body.isEmpty) {
-        throw Exception('Server returned empty response');
+      if (response.statusCode == 201) {
+        final responseData = jsonDecode(response.body);
+        print('DEBUG: Subscription created successfully: $responseData');
+
+        // Build a complete JSON object with all required fields
+        final subscriptionJson = {
+          'id': responseData['id'],
+          'subscription_code': responseData['subscription_code'],
+          'school_code': data['school_code'],
+          'school_name': data['school_name'],
+          'school_email': data['school_email'],
+          'school_phone': data['school_phone'],
+          'school_address': data['school_address'],
+          'total_students': data['total_students'],
+          'total_buses': data['total_buses'],
+          'plan_id': data['plan_id'],
+          'amount': data['amount'],
+          'status': data['status'],
+          'start_date': data['start_date'],
+          'end_date': responseData['end_date'],
+          'auto_renew': data['auto_renew'],
+          'payment_method': data['payment_method'],
+          'transaction_id': data['transaction_id'],
+          'created_at': DateTime.now().toIso8601String(),
+          'billing_cycle': responseData['billing_cycle'],
+          // Add plan fields if needed
+          'plan_name': '', // You might need to fetch this separately
+        };
+
+        print('DEBUG: Built subscriptionJson: $subscriptionJson');
+
+        return SchoolSubscription.fromJson(subscriptionJson);
+      } else {
+        throw Exception('Failed to create subscription. Status: ${response.statusCode}, Response: ${response.body}');
       }
-
-      await _handleResponse(response);
-      return SchoolSubscription.fromJson(json.decode(response.body));
     } catch (e) {
-      print('Error creating subscription: $e');
-      rethrow;
+      print('ERROR in createSubscription: $e');
+      throw Exception('Failed to create subscription: $e');
     }
   }
 
-  Future<SchoolSubscription> updateSubscription(int id, Map<String, dynamic> data) async{
+  Future<void> updateSubscription(int id, Map<String, dynamic> data) async {
     try {
+      print('DEBUG: Updating subscription ID: $id');
+      print('DEBUG: Update data: $data');
+
       final uri = Uri.parse('$baseUrl/subscriptions/$id');
+
       final response = await http.put(
         uri,
-        headers: headers,
-        body: json.encode(data),
-      ).timeout(timeout);
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode(data),
+      );
 
-      await _handleResponse(response);
-      return SchoolSubscription.fromJson(json.decode(response.body));
+      print('DEBUG: Update response status: ${response.statusCode}');
+      print('DEBUG: Update response body: ${response.body}');
+
+      // Check if response is JSON
+      final contentType = response.headers['content-type']?.toLowerCase() ?? '';
+      if (!contentType.contains('application/json')) {
+        print('DEBUG: Non-JSON response detected');
+        print('DEBUG: Full response: ${response.body}');
+        throw Exception('Server returned non-JSON response: ${response.body.substring(0, 100)}');
+      }
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final responseData = jsonDecode(response.body);
+        print('DEBUG: Update successful: $responseData');
+      } else {
+        throw Exception('Failed to update subscription. Status: ${response.statusCode}, Response: ${response.body}');
+      }
     } catch (e) {
-      print('Error updating subscription: $e');
-      throw Exception('Failed to update subscriptions: $e');
+      print('ERROR in updateSubscription: $e');
+      throw Exception('Failed to update subscription: $e');
     }
   }
 
